@@ -1,9 +1,11 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../models/advertisement.dart';
 import '../../models/event_offer.dart';
+import '../../models/occasion_theme.dart';
 import 'customer_offer_popup_dialog.dart';
 import '../../services/state_service.dart';
 import '../../services/catalog_data.dart';
@@ -60,7 +62,7 @@ class _CustomerMainScreenState extends State<CustomerMainScreen> {
       final next = (_currentAdSlide + 1) % total;
       _adPageController.animateToPage(
         next,
-        duration: const Duration(milliseconds: 900), // Slow, smooth sliding transition!
+        duration: const Duration(milliseconds: 900),
         curve: Curves.easeInOutCubic,
       );
     });
@@ -88,6 +90,305 @@ class _CustomerMainScreenState extends State<CustomerMainScreen> {
     _adPageController.dispose();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _openItemDetailSheet(BuildContext context, StateService state, CatalogItem item) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) => ItemDetailSheet(
+        item: item,
+        onAdd: (serviceType, qtyOrWeight, notes) {
+          state.addToCart(item, serviceType, quantityOrWeight: qtyOrWeight, notes: notes);
+          final qtyLabel = item.pricingUnit == PricingUnit.kg
+              ? '${qtyOrWeight.toStringAsFixed(1)} KG'
+              : '${qtyOrWeight.round()} Pcs';
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('🧺 Added $qtyLabel of ${item.itemName} (${serviceType.displayName}) to basket'),
+              duration: const Duration(milliseconds: 1500),
+              backgroundColor: AppColors.primary,
+            ),
+          );
+        },
+      ),
+    );
+  }
+
+  void _showOccasionDialog(BuildContext context, OccasionTheme theme, bool isAr) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Text(theme.iconEmoji, style: const TextStyle(fontSize: 24)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                isAr ? theme.nameAr : theme.name,
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              isAr ? theme.greetingBannerAr : theme.greetingBanner,
+              style: const TextStyle(fontSize: 13, color: AppColors.textDark, height: 1.4),
+            ),
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: theme.primaryColor.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: theme.primaryColor.withValues(alpha: 0.3)),
+              ),
+              child: Row(
+                children: [
+                  const Icon(Icons.celebration, color: AppColors.primary),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: const [
+                        Text('Festive Voucher Code', style: TextStyle(fontSize: 11, color: AppColors.textMuted)),
+                        Text('FESTIVE25 • 25% OFF', style: TextStyle(fontSize: 13, fontWeight: FontWeight.w800, color: AppColors.primaryDark)),
+                      ],
+                    ),
+                  ),
+                  ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: theme.primaryColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                    ),
+                    onPressed: () {
+                      Clipboard.setData(const ClipboardData(text: 'FESTIVE25'));
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('🎉 Promo Code "FESTIVE25" copied! Paste in Basket.'),
+                          backgroundColor: AppColors.success,
+                        ),
+                      );
+                    },
+                    child: const Text('Copy Code', style: TextStyle(fontSize: 11)),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showBroadcastDialog(BuildContext context, dynamic latestBroadcast, bool isAr) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: const [
+            Icon(Icons.campaign, color: Color(0xFFB45309)),
+            SizedBox(width: 8),
+            Text('Official Announcement', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 16)),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.amber.shade200,
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: const Text('URGENT BROADCAST', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF78350F))),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isAr && latestBroadcast.titleAr.isNotEmpty ? latestBroadcast.titleAr : latestBroadcast.title,
+              style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15, color: Color(0xFF78350F)),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              isAr && latestBroadcast.messageAr.isNotEmpty ? latestBroadcast.messageAr : latestBroadcast.message,
+              style: const TextStyle(fontSize: 13, color: Color(0xFF92400E), height: 1.4),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFFB45309),
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() => _currentTabIndex = 1);
+            },
+            child: const Text('View All Offers'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAdDetailDialog(BuildContext context, Advertisement ad, bool isAr) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Text(ad.graphicEmoji, style: const TextStyle(fontSize: 24)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                isAr && ad.titleAr.isNotEmpty ? ad.titleAr : ad.title,
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: ad.primaryColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '${ad.countryFlag} OFFICIAL PROMOTION • Valid until ${DateFormat('dd MMM yyyy').format(ad.validUntil)}',
+                style: TextStyle(color: ad.primaryColor, fontWeight: FontWeight.bold, fontSize: 11),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              isAr && ad.messageAr.isNotEmpty ? ad.messageAr : ad.message,
+              style: const TextStyle(fontSize: 13, color: AppColors.textDark, height: 1.4),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: ad.primaryColor,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Navigator.pop(ctx);
+              setState(() => _currentTabIndex = 0);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('✨ Promo "${ad.title}" activated!'),
+                  backgroundColor: ad.primaryColor,
+                ),
+              );
+            },
+            child: Text(isAr ? ad.ctaTextAr : ad.ctaText),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showOfferDetailDialog(BuildContext context, EventOffer offer, bool isAr) {
+    showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Text(offer.iconEmoji, style: const TextStyle(fontSize: 24)),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                isAr ? offer.titleAr : offer.title,
+                style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 16),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: offer.bannerColor.withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(6),
+              ),
+              child: Text(
+                '${offer.discountPercent.toStringAsFixed(0)}% DISCOUNT • Code: ${offer.promoCode}',
+                style: TextStyle(color: offer.bannerColor, fontWeight: FontWeight.w900, fontSize: 12),
+              ),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              isAr ? offer.descriptionAr : offer.description,
+              style: const TextStyle(fontSize: 13, color: AppColors.textDark, height: 1.4),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Valid until: ${DateFormat('dd MMMM yyyy').format(offer.validUntil)}',
+              style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: offer.bannerColor,
+              foregroundColor: Colors.white,
+            ),
+            onPressed: () {
+              Clipboard.setData(ClipboardData(text: offer.promoCode));
+              Navigator.pop(ctx);
+              setState(() => _currentTabIndex = 0);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('🎉 Promo Code "${offer.promoCode}" copied to clipboard!'),
+                  backgroundColor: offer.bannerColor,
+                ),
+              );
+            },
+            child: const Text('Copy Code & Shop'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -121,153 +422,163 @@ class _CustomerMainScreenState extends State<CustomerMainScreen> {
         children: [
           CustomScrollView(
             slivers: [
-              // Dynamic Occasion Theme Festive Ribbon
+              // Dynamic Occasion Theme Festive Ribbon (Clickable!)
               SliverToBoxAdapter(
-                child: Container(
-                  margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      colors: [theme.primaryColor, theme.primaryDarkColor],
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
+                child: InkWell(
+                  onTap: () => _showOccasionDialog(context, theme, isAr),
+                  child: Container(
+                    margin: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        colors: [theme.primaryColor, theme.primaryDarkColor],
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                      ),
+                      borderRadius: BorderRadius.circular(12),
                     ),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      Text(theme.iconEmoji, style: const TextStyle(fontSize: 18)),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          isAr ? theme.greetingBannerAr : theme.greetingBanner,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                    child: Row(
+                      children: [
+                        Text(theme.iconEmoji, style: const TextStyle(fontSize: 18)),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            isAr ? theme.greetingBannerAr : theme.greetingBanner,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                          ),
                         ),
-                      ),
-                      Text(
-                        '${state.selectedCountry.flag} ${theme.name.split(' ')[0]}',
-                        style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w700),
-                      ),
-                    ],
+                        Text(
+                          '${state.selectedCountry.flag} ${theme.name.split(' ')[0]} >',
+                          style: const TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.w700),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
 
-              // Promotional Broadcast Announcement Banner (from Admin / Super Admin)
+              // Promotional Broadcast Announcement Banner (Clickable!)
               if (latestBroadcast != null)
                 SliverToBoxAdapter(
-                  child: Container(
-                    margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.amber.shade50,
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: Colors.amber.shade400, width: 1.5),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.campaign, color: Color(0xFFB45309), size: 24),
-                        const SizedBox(width: 10),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Wrap(
-                                crossAxisAlignment: WrapCrossAlignment.center,
-                                spacing: 6,
-                                runSpacing: 2,
-                                children: [
-                                  Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: Colors.amber.shade200,
-                                      borderRadius: BorderRadius.circular(4),
+                  child: InkWell(
+                    onTap: () => _showBroadcastDialog(context, latestBroadcast, isAr),
+                    child: Container(
+                      margin: const EdgeInsets.fromLTRB(16, 4, 16, 4),
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.amber.shade50,
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: Colors.amber.shade400, width: 1.5),
+                      ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.campaign, color: Color(0xFFB45309), size: 24),
+                          const SizedBox(width: 10),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Wrap(
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  spacing: 6,
+                                  runSpacing: 2,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: Colors.amber.shade200,
+                                        borderRadius: BorderRadius.circular(4),
+                                      ),
+                                      child: const Text(
+                                        'PROMO BROADCAST',
+                                        style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF78350F)),
+                                      ),
                                     ),
-                                    child: const Text(
-                                      'PROMO BROADCAST',
-                                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF78350F)),
+                                    Text(
+                                      isAr && latestBroadcast.titleAr.isNotEmpty ? latestBroadcast.titleAr : latestBroadcast.title,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: Color(0xFF78350F)),
                                     ),
-                                  ),
-                                  Text(
-                                    isAr && latestBroadcast.titleAr.isNotEmpty ? latestBroadcast.titleAr : latestBroadcast.title,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: Color(0xFF78350F)),
-                                  ),
-                                ],
-                              ),
-                              const SizedBox(height: 2),
-                              Text(
-                                isAr && latestBroadcast.messageAr.isNotEmpty ? latestBroadcast.messageAr : latestBroadcast.message,
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(fontSize: 11, color: Color(0xFF92400E)),
-                              ),
-                            ],
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  isAr && latestBroadcast.messageAr.isNotEmpty ? latestBroadcast.messageAr : latestBroadcast.message,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: const TextStyle(fontSize: 11, color: Color(0xFF92400E)),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        TextButton(
-                          onPressed: () => setState(() => _currentTabIndex = 1),
-                          child: const Text('View All >', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFFB45309))),
-                        ),
-                      ],
+                          const Text('View >', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 11, color: Color(0xFFB45309))),
+                        ],
+                      ),
                     ),
                   ),
                 ),
 
-              // Active Order Alert Bar if exists
+              // Active Order Alert Bar (Entire bar is Clickable!)
               if (activeOrder != null)
                 SliverToBoxAdapter(
-                  child: Container(
-                    margin: const EdgeInsets.fromLTRB(16, 6, 16, 4),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                    decoration: BoxDecoration(
-                      color: activeOrder.status.color.withValues(alpha: 0.12),
-                      borderRadius: BorderRadius.circular(14),
-                      border: Border.all(color: activeOrder.status.color.withValues(alpha: 0.4)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(activeOrder.status.icon, color: activeOrder.status.color, size: 24),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Order #${activeOrder.orderNumber} • ${activeOrder.status.displayName}',
-                                style: TextStyle(
-                                  fontWeight: FontWeight.w700,
-                                  fontSize: 13,
-                                  color: activeOrder.status.color,
+                  child: InkWell(
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => OrderStepperScreen(order: activeOrder),
+                        ),
+                      );
+                    },
+                    child: Container(
+                      margin: const EdgeInsets.fromLTRB(16, 6, 16, 4),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: activeOrder.status.color.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(color: activeOrder.status.color.withValues(alpha: 0.4)),
+                      ),
+                      child: Row(
+                        children: [
+                          Icon(activeOrder.status.icon, color: activeOrder.status.color, size: 24),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Order #${activeOrder.orderNumber} • ${activeOrder.status.displayName}',
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.w700,
+                                    fontSize: 13,
+                                    color: activeOrder.status.color,
+                                  ),
                                 ),
-                              ),
-                              const Text(
-                                'Tap to view live order progress and driver location',
-                                style: TextStyle(fontSize: 11, color: AppColors.textMuted),
-                              ),
-                            ],
+                                const Text(
+                                  'Tap to view live order progress and driver location',
+                                  style: TextStyle(fontSize: 11, color: AppColors.textMuted),
+                                ),
+                              ],
+                            ),
                           ),
-                        ),
-                        TextButton(
-                          onPressed: () {
-                            Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => OrderStepperScreen(order: activeOrder),
-                              ),
-                            );
-                          },
-                          child: const Text('Track', style: TextStyle(fontWeight: FontWeight.w700)),
-                        ),
-                      ],
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                            decoration: BoxDecoration(
+                              color: activeOrder.status.color,
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                            child: const Text('Track', style: TextStyle(fontWeight: FontWeight.w700, color: Colors.white, fontSize: 11)),
+                          ),
+                        ],
+                      ),
                     ),
                   ),
                 ),
 
-              // Customer Popup Floating Quick Banner (if active popup exists)
+              // Customer Popup Floating Quick Banner
               if (state.activePopupOffer != null && state.activePopupOffer!.isActive)
                 SliverToBoxAdapter(
                   child: Container(
@@ -349,7 +660,7 @@ class _CustomerMainScreenState extends State<CustomerMainScreen> {
                   ),
                 ),
 
-              // Dynamic Ads & Event Offers Banners Carousel (5-second slow smooth auto-slide)
+              // Dynamic Ads & Event Offers Banners Carousel
               SliverToBoxAdapter(
                 child: Builder(
                   builder: (context) {
@@ -368,7 +679,7 @@ class _CustomerMainScreenState extends State<CustomerMainScreen> {
                             controller: _adPageController,
                             onPageChanged: (idx) {
                               setState(() => _currentAdSlide = idx);
-                              _startAdAutoSlider(); // smoothly reset 5s timer after manual touch
+                              _startAdAutoSlider();
                             },
                             itemBuilder: (context, index) {
                               final item = allSlides[index];
@@ -466,7 +777,7 @@ class _CustomerMainScreenState extends State<CustomerMainScreen> {
                 ),
               ),
 
-              // Garment Catalog Grid
+              // Garment Catalog Grid (WHOLE CARD IS CLICKABLE!)
               SliverPadding(
                 padding: const EdgeInsets.fromLTRB(16, 8, 16, 90),
                 sliver: SliverGrid(
@@ -479,222 +790,207 @@ class _CustomerMainScreenState extends State<CustomerMainScreen> {
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
                       final item = filteredItems[index];
-                      return Container(
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          borderRadius: BorderRadius.circular(16),
-                          border: Border.all(color: AppColors.border),
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Stack(
-                                children: [
-                                  Container(
-                                    width: double.infinity,
-                                    decoration: BoxDecoration(
-                                      color: AppColors.surfaceMuted,
-                                      borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
-                                    ),
-                                    child: Center(
-                                      child: Text(item.icon, style: const TextStyle(fontSize: 42)),
-                                    ),
-                                  ),
-                                  // Badges: Sale %, By KG, Special Offer
-                                  Positioned(
-                                    top: 8,
-                                    left: 8,
-                                    right: 8,
-                                    child: Row(
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                      children: [
-                                        if (item.pricingUnit == PricingUnit.kg)
-                                          Container(
+
+                      return Material(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        clipBehavior: Clip.antiAlias,
+                        child: InkWell(
+                          onTap: () => _openItemDetailSheet(context, state, item),
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              border: Border.all(color: AppColors.border),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Expanded(
+                                  child: Stack(
+                                    children: [
+                                      Container(
+                                        width: double.infinity,
+                                        decoration: BoxDecoration(
+                                          color: AppColors.surfaceMuted,
+                                          borderRadius: const BorderRadius.vertical(top: Radius.circular(15)),
+                                        ),
+                                        child: Center(
+                                          child: Text(item.icon, style: const TextStyle(fontSize: 42)),
+                                        ),
+                                      ),
+                                      // Badges: Sale %, By KG
+                                      Positioned(
+                                        top: 8,
+                                        left: 8,
+                                        right: 8,
+                                        child: Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            if (item.pricingUnit == PricingUnit.kg)
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.accent,
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: const Text(
+                                                  'BY KG',
+                                                  style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800),
+                                                ),
+                                              )
+                                            else
+                                              const SizedBox(),
+                                            if (item.isOnSale)
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                                decoration: BoxDecoration(
+                                                  color: AppColors.error,
+                                                  borderRadius: BorderRadius.circular(6),
+                                                ),
+                                                child: Text(
+                                                  '${item.saleDiscountPercent.toStringAsFixed(0)}% OFF',
+                                                  style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800),
+                                                ),
+                                              ),
+                                          ],
+                                        ),
+                                      ),
+                                      if (item.hasSpecialOffer)
+                                        Positioned(
+                                          bottom: 6,
+                                          left: 8,
+                                          right: 8,
+                                          child: Container(
                                             padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                                             decoration: BoxDecoration(
-                                              color: AppColors.accent,
-                                              borderRadius: BorderRadius.circular(6),
-                                            ),
-                                            child: const Text(
-                                              'BY KG',
-                                              style: TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800),
-                                            ),
-                                          )
-                                        else
-                                          const SizedBox(),
-                                        if (item.isOnSale)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: AppColors.error,
-                                              borderRadius: BorderRadius.circular(6),
+                                              color: const Color(0xFFFEF3C7),
+                                              borderRadius: BorderRadius.circular(4),
+                                              border: Border.all(color: const Color(0xFFFDE68A)),
                                             ),
                                             child: Text(
-                                              '${item.saleDiscountPercent.toStringAsFixed(0)}% OFF',
-                                              style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.w800),
+                                              '🏷️ ${item.specialOfferTag}',
+                                              maxLines: 1,
+                                              overflow: TextOverflow.ellipsis,
+                                              style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF92400E)),
                                             ),
                                           ),
-                                      ],
-                                    ),
-                                  ),
-                                  if (item.hasSpecialOffer)
-                                    Positioned(
-                                      bottom: 6,
-                                      left: 8,
-                                      right: 8,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFFEF3C7),
-                                          borderRadius: BorderRadius.circular(4),
-                                          border: Border.all(color: const Color(0xFFFDE68A)),
                                         ),
-                                        child: Text(
-                                          '🏷️ ${item.specialOfferTag}',
+                                    ],
+                                  ),
+                                ),
+                                Padding(
+                                  padding: const EdgeInsets.all(12),
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        state.currentLanguage == AppLanguage.ar && item.categoryAr.isNotEmpty ? item.categoryAr : item.category.toUpperCase(),
+                                        style: const TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.primary,
+                                          letterSpacing: 0.5,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        item.itemName,
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          fontWeight: FontWeight.w700,
+                                          color: AppColors.textDark,
+                                        ),
+                                      ),
+                                      if (item.itemNameAr.isNotEmpty) ...[
+                                        const SizedBox(height: 1),
+                                        Text(
+                                          item.itemNameAr,
                                           maxLines: 1,
                                           overflow: TextOverflow.ellipsis,
-                                          style: const TextStyle(fontSize: 9, fontWeight: FontWeight.w800, color: Color(0xFF92400E)),
+                                          style: const TextStyle(
+                                            fontSize: 11,
+                                            fontWeight: FontWeight.w600,
+                                            color: AppColors.primary,
+                                          ),
                                         ),
-                                      ),
-                                    ),
-                                ],
-                              ),
-                            ),
-                            Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    state.currentLanguage == AppLanguage.ar && item.categoryAr.isNotEmpty ? item.categoryAr : item.category.toUpperCase(),
-                                    style: const TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.primary,
-                                      letterSpacing: 0.5,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    item.itemName,
-                                    maxLines: 1,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: const TextStyle(
-                                      fontSize: 12,
-                                      fontWeight: FontWeight.w700,
-                                      color: AppColors.textDark,
-                                    ),
-                                  ),
-                                  if (item.itemNameAr.isNotEmpty) ...[
-                                    const SizedBox(height: 1),
-                                    Text(
-                                      item.itemNameAr,
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: const TextStyle(
-                                        fontSize: 11,
-                                        fontWeight: FontWeight.w600,
-                                        color: AppColors.primary,
-                                      ),
-                                    ),
-                                  ],
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                    crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: [
-                                      Expanded(
-                                        child: FittedBox(
-                                          fit: BoxFit.scaleDown,
-                                          alignment: Alignment.centerLeft,
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              if (item.isOnSale) ...[
+                                      ],
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        crossAxisAlignment: CrossAxisAlignment.end,
+                                        children: [
+                                          Expanded(
+                                            child: FittedBox(
+                                              fit: BoxFit.scaleDown,
+                                              alignment: Alignment.centerLeft,
+                                              child: Column(
+                                                crossAxisAlignment: CrossAxisAlignment.start,
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  if (item.isOnSale) ...[
+                                                    Text(
+                                                      state.formatCurrency(item.basePriceQar),
+                                                      style: const TextStyle(
+                                                        fontSize: 10,
+                                                        decoration: TextDecoration.lineThrough,
+                                                        color: Colors.red,
+                                                      ),
+                                                    ),
+                                                    Text(
+                                                      '${state.formatCurrency(item.effectivePriceQar)} ${item.pricingUnit.shortLabel}',
+                                                      style: const TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight: FontWeight.w800,
+                                                        color: AppColors.primaryDark,
+                                                      ),
+                                                    ),
+                                                  ] else ...[
+                                                    Text(
+                                                      '${state.formatCurrency(item.basePriceQar)} ${item.pricingUnit.shortLabel}',
+                                                      style: const TextStyle(
+                                                        fontSize: 12,
+                                                        fontWeight: FontWeight.w800,
+                                                        color: AppColors.textDark,
+                                                      ),
+                                                    ),
+                                                  ],
+                                                ],
+                                              ),
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
+                                            decoration: BoxDecoration(
+                                              color: AppColors.primary,
+                                              borderRadius: BorderRadius.circular(8),
+                                            ),
+                                            child: Row(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: const [
+                                                Icon(Icons.add, size: 13, color: Colors.white),
+                                                SizedBox(width: 2),
                                                 Text(
-                                                  state.formatCurrency(item.basePriceQar),
-                                                  style: const TextStyle(
-                                                    fontSize: 10,
-                                                    decoration: TextDecoration.lineThrough,
-                                                    color: Colors.red,
-                                                  ),
-                                                ),
-                                                Text(
-                                                  '${state.formatCurrency(item.effectivePriceQar)} ${item.pricingUnit.shortLabel}',
-                                                  style: const TextStyle(
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w800,
-                                                    color: AppColors.primaryDark,
-                                                  ),
-                                                ),
-                                              ] else ...[
-                                                Text(
-                                                  '${state.formatCurrency(item.basePriceQar)} ${item.pricingUnit.shortLabel}',
-                                                  style: const TextStyle(
-                                                    fontSize: 12,
-                                                    fontWeight: FontWeight.w800,
-                                                    color: AppColors.textDark,
+                                                  'Add',
+                                                  style: TextStyle(
+                                                    color: Colors.white,
+                                                    fontSize: 11,
+                                                    fontWeight: FontWeight.w700,
                                                   ),
                                                 ),
                                               ],
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                      const SizedBox(width: 4),
-                                      InkWell(
-                                        onTap: () {
-                                          showModalBottomSheet(
-                                            context: context,
-                                            isScrollControlled: true,
-                                            backgroundColor: Colors.transparent,
-                                            builder: (_) => ItemDetailSheet(
-                                              item: item,
-                                              onAdd: (serviceType, qtyOrWeight, notes) {
-                                                state.addToCart(item, serviceType, quantityOrWeight: qtyOrWeight, notes: notes);
-                                                final qtyLabel = item.pricingUnit == PricingUnit.kg ? '${qtyOrWeight.toStringAsFixed(1)} KG' : '${qtyOrWeight.round()} Pcs';
-                                                ScaffoldMessenger.of(context).showSnackBar(
-                                                  SnackBar(
-                                                    content: Text('🧺 Added $qtyLabel of ${item.itemName} (${serviceType.displayName}) to basket'),
-                                                    duration: const Duration(milliseconds: 1500),
-                                                    backgroundColor: AppColors.primary,
-                                                  ),
-                                                );
-                                              },
                                             ),
-                                          );
-                                        },
-                                        child: Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 5),
-                                          decoration: BoxDecoration(
-                                            color: AppColors.primary,
-                                            borderRadius: BorderRadius.circular(8),
                                           ),
-                                          child: Row(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: const [
-                                              Icon(Icons.add, size: 13, color: Colors.white),
-                                              SizedBox(width: 2),
-                                              Text(
-                                                'Add',
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 11,
-                                                  fontWeight: FontWeight.w700,
-                                                ),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
+                                        ],
                                       ),
                                     ],
                                   ),
-                                ],
-                              ),
+                                ),
+                              ],
                             ),
-                          ],
+                          ),
                         ),
                       );
                     },
@@ -752,10 +1048,10 @@ class _CustomerMainScreenState extends State<CustomerMainScreen> {
                       Row(
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                             decoration: BoxDecoration(
-                              color: Colors.white.withValues(alpha: 0.2),
-                              borderRadius: BorderRadius.circular(8),
+                              color: AppColors.accent,
+                              borderRadius: BorderRadius.circular(12),
                             ),
                             child: Text(
                               '${state.cart.length}',
@@ -904,7 +1200,8 @@ class _CustomerMainScreenState extends State<CustomerMainScreen> {
               ),
             ),
           ),
-          const SizedBox(width: 8),
+          // Right padding so top-right floating portal switcher never overlaps actions
+          const SizedBox(width: 68),
         ],
       ),
       body: bodyContent,
@@ -938,25 +1235,7 @@ class _CustomerMainScreenState extends State<CustomerMainScreen> {
 
   Widget _buildAdSlideCard(BuildContext context, StateService state, Advertisement ad, bool isAr) {
     return InkWell(
-      onTap: () {
-        if (ad.ctaLink == 'express') {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('🚚 Express VIP Pickup activated for ${ad.countryFlag}!'),
-              backgroundColor: ad.primaryColor,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('✨ Promo "${ad.title}" selected! Enjoy premium care.'),
-              backgroundColor: ad.primaryColor,
-              duration: const Duration(seconds: 3),
-            ),
-          );
-        }
-      },
+      onTap: () => _showAdDetailDialog(context, ad, isAr),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
         padding: const EdgeInsets.all(16),
@@ -1061,25 +1340,7 @@ class _CustomerMainScreenState extends State<CustomerMainScreen> {
   Widget _buildEventOfferSlideCard(BuildContext context, StateService state, EventOffer offer, bool isAr) {
     final color = offer.bannerColor;
     return InkWell(
-      onTap: () {
-        Clipboard.setData(ClipboardData(text: offer.promoCode));
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Row(
-              children: [
-                Text(offer.iconEmoji, style: const TextStyle(fontSize: 18)),
-                const SizedBox(width: 8),
-                Text(
-                  '🎉 Promo Code "${offer.promoCode}" copied! ${offer.discountPercent.toStringAsFixed(0)}% OFF',
-                  style: const TextStyle(fontWeight: FontWeight.w700),
-                ),
-              ],
-            ),
-            backgroundColor: color,
-            duration: const Duration(seconds: 3),
-          ),
-        );
-      },
+      onTap: () => _showOfferDetailDialog(context, offer, isAr),
       child: Container(
         margin: const EdgeInsets.symmetric(horizontal: 6, vertical: 8),
         padding: const EdgeInsets.all(16),

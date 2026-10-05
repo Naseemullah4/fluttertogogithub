@@ -1,4 +1,3 @@
-import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../models/user.dart';
@@ -19,13 +18,188 @@ class PortalSwitcherScreen extends StatefulWidget {
 }
 
 class _PortalSwitcherScreenState extends State<PortalSwitcherScreen> {
-  bool _useMobileFrame360x690 = true;
+  bool _forceDesktopFullWidth = false;
+
+  void _showRoleSwitcherSheet(BuildContext context, StateService state) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => Container(
+        decoration: const BoxDecoration(
+          color: Color(0xFF0F172A), // Dark slate premium theme
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 12, 20, 24),
+        child: SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Center(
+                child: Container(
+                  width: 44,
+                  height: 4,
+                  decoration: BoxDecoration(
+                    color: Colors.white24,
+                    borderRadius: BorderRadius.circular(2),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  const UniWashLogo.badge(size: 30),
+                  const SizedBox(width: 10),
+                  const Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Switch UniWash Portal',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.w800,
+                          ),
+                        ),
+                        Text(
+                          'Select your testing persona or platform view',
+                          style: TextStyle(
+                            color: Colors.white60,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close, color: Colors.white70),
+                    onPressed: () => Navigator.pop(ctx),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 16),
+              const Divider(color: Colors.white12, height: 1),
+              const SizedBox(height: 12),
+              ...UserRole.values.map((role) {
+                final isSelected = role == state.currentUser.role;
+                final isMobile = role == UserRole.customer || role == UserRole.driver;
+
+                return Padding(
+                  padding: const EdgeInsets.only(bottom: 8),
+                  child: InkWell(
+                    onTap: () {
+                      state.switchRole(role);
+                      Navigator.pop(ctx);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Switched to ${role.title}'),
+                          duration: const Duration(milliseconds: 1200),
+                          backgroundColor: AppColors.primary,
+                        ),
+                      );
+                    },
+                    borderRadius: BorderRadius.circular(14),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? AppColors.primary.withValues(alpha: 0.25)
+                            : Colors.white.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(14),
+                        border: Border.all(
+                          color: isSelected ? AppColors.primaryLight : Colors.white12,
+                          width: isSelected ? 1.5 : 1,
+                        ),
+                      ),
+                      child: Row(
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.all(10),
+                            decoration: BoxDecoration(
+                              color: isSelected
+                                  ? AppColors.primary
+                                  : Colors.white.withValues(alpha: 0.08),
+                              shape: BoxShape.circle,
+                            ),
+                            child: Icon(
+                              _getRoleIcon(role),
+                              color: Colors.white,
+                              size: 20,
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Expanded(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Row(
+                                  children: [
+                                    Text(
+                                      role.title,
+                                      style: TextStyle(
+                                        color: Colors.white,
+                                        fontWeight: isSelected ? FontWeight.w800 : FontWeight.w600,
+                                        fontSize: 14,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 8),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                      decoration: BoxDecoration(
+                                        color: isMobile
+                                            ? Colors.teal.withValues(alpha: 0.2)
+                                            : Colors.blue.withValues(alpha: 0.2),
+                                        borderRadius: BorderRadius.circular(6),
+                                      ),
+                                      child: Text(
+                                        isMobile ? '📱 Mobile App' : '💻 Web Dashboard',
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.w700,
+                                          color: isMobile ? Colors.tealAccent : Colors.lightBlueAccent,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  _getRoleDescription(role),
+                                  style: const TextStyle(
+                                    color: Colors.white60,
+                                    fontSize: 11,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (isSelected)
+                            const Icon(
+                              Icons.check_circle,
+                              color: AppColors.primaryLight,
+                              size: 20,
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                );
+              }),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     final state = context.watch<StateService>();
     final role = state.currentUser.role;
-    final isMobile = role == UserRole.customer || role == UserRole.driver;
+    final isMobileRole = role == UserRole.customer || role == UserRole.driver;
+    final screenWidth = MediaQuery.of(context).size.width;
 
     Widget currentPortal;
     switch (role) {
@@ -46,298 +220,141 @@ class _PortalSwitcherScreenState extends State<PortalSwitcherScreen> {
         break;
     }
 
-    final screenWidth = MediaQuery.of(context).size.width;
-
     Widget mainContent;
 
-    if (isMobile && _useMobileFrame360x690 && screenWidth > 420) {
-      // Centered 360 x 690 Mobile Viewport Frame for Customer & Driver on desktop/browser
-      mainContent = LayoutBuilder(
-        builder: (context, constraints) {
-          // Calculate dynamically available height inside the Scaffold body
-          final availableHeight = constraints.maxHeight;
-          // Overhead for device header tag (~28px) + vertical margins/padding (~24px)
-          const double overhead = 52.0;
-          final double maxFrameHeight = math.max(300.0, availableHeight - overhead);
-          final double frameHeight = math.min(690.0, maxFrameHeight);
-
-          return Container(
-            width: double.infinity,
-            height: double.infinity,
-            color: const Color(0xFF0B132B), // Deep navy aesthetic background
-            child: Center(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(vertical: 8),
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Device header tag
-                    Container(
-                      margin: const EdgeInsets.only(bottom: 8),
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                      decoration: BoxDecoration(
-                        color: Colors.white.withValues(alpha: 0.12),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: Colors.white.withValues(alpha: 0.15)),
-                      ),
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const UniWashLogo.badge(size: 16),
-                          const SizedBox(width: 8),
-                          Text(
-                            '${role.shortName} App • 360 × 690 Mobile Viewport',
-                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.tealAccent),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // The 360 x 690 Container Frame
-                    Container(
-                      width: 360,
-                      height: frameHeight,
-                      clipBehavior: Clip.antiAlias,
-                      decoration: BoxDecoration(
-                        color: Colors.white,
-                        borderRadius: BorderRadius.circular(28),
-                        border: Border.all(color: const Color(0xFF1E293B), width: 3.5),
-                        boxShadow: [
-                          BoxShadow(
-                            color: Colors.black.withValues(alpha: 0.45),
-                            blurRadius: 30,
-                            spreadRadius: 2,
-                            offset: const Offset(0, 12),
-                          ),
-                        ],
-                      ),
-                      child: currentPortal,
-                    ),
-                  ],
+    // Mobile-first responsive logic:
+    // 1. If screenWidth < 768 (phones, tablets, narrow windows): 100% full screen fluid fit!
+    // 2. If screenWidth >= 768 on desktop for mobile roles:
+    //    We center the mobile view cleanly without artificial height clipping!
+    if (isMobileRole && screenWidth >= 768 && !_forceDesktopFullWidth) {
+      mainContent = Container(
+        color: const Color(0xFF0F172A), // Dark slate sleek background for desktop preview
+        child: Center(
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 440),
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(color: const Color(0xFF334155), width: 3),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.5),
+                  blurRadius: 36,
+                  offset: const Offset(0, 16),
                 ),
-              ),
+              ],
             ),
-          );
-        },
+            clipBehavior: Clip.antiAlias,
+            child: currentPortal,
+          ),
+        ),
       );
     } else {
-      // Full screen Web Application (for Super Admin, Admin, Laundry) or native mobile view
+      // 100% Full-screen mobile layout (fluid, responsive, fits every phone perfectly)
       mainContent = currentPortal;
     }
 
     return Scaffold(
-      body: mainContent,
-      bottomNavigationBar: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF0F172A), // Dark slate premium bottom bar
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.25),
-              blurRadius: 12,
-              offset: const Offset(0, -3),
+      body: Stack(
+        children: [
+          Positioned.fill(child: mainContent),
+
+          // Sleek Floating Portal Switcher Badge
+          // Designed to never block the main app tabs while remaining 100% accessible anywhere
+          Positioned(
+            top: MediaQuery.of(context).padding.top + 8,
+            right: 12,
+            child: Material(
+              color: Colors.transparent,
+              child: InkWell(
+                onTap: () => _showRoleSwitcherSheet(context, state),
+                borderRadius: BorderRadius.circular(24),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F172A).withValues(alpha: 0.90),
+                    borderRadius: BorderRadius.circular(24),
+                    border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withValues(alpha: 0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const UniWashLogo.badge(size: 16),
+                      const SizedBox(width: 6),
+                      Text(
+                        role.shortName,
+                        style: const TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w700,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      const Icon(
+                        Icons.unfold_more,
+                        size: 14,
+                        color: Colors.tealAccent,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
-          ],
-        ),
-        child: SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: Row(
-                  children: [
-                    const UniWashLogo.badge(size: 32),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            children: [
-                              Text(
-                                state.currentUser.role.title,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.w700,
-                                  color: Colors.white,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                decoration: BoxDecoration(
-                                  color: _isWebPortal(role)
-                                      ? AppColors.accent.withValues(alpha: 0.3)
-                                      : AppColors.primary.withValues(alpha: 0.3),
-                                  borderRadius: BorderRadius.circular(6),
-                                ),
-                                child: Text(
-                                  _isWebPortal(role) ? '💻 BROWSER WEB APP' : '📱 MOBILE (360×690)',
-                                  style: TextStyle(
-                                    fontSize: 9,
-                                    fontWeight: FontWeight.w800,
-                                    color: _isWebPortal(role) ? Colors.lightBlueAccent : Colors.tealAccent,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                          Text(
-                            'Logged in as: ${state.currentUser.fullName}',
-                            style: const TextStyle(
-                              fontSize: 10,
-                              color: Colors.white60,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-
-                    // 360 x 690 Viewport Size Toggle for mobile roles
-                    if (isMobile && screenWidth > 420)
-                      Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: InkWell(
-                          onTap: () {
-                            setState(() => _useMobileFrame360x690 = !_useMobileFrame360x690);
-                          },
-                          borderRadius: BorderRadius.circular(8),
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            decoration: BoxDecoration(
-                              color: _useMobileFrame360x690 ? Colors.teal.shade800 : Colors.white12,
-                              borderRadius: BorderRadius.circular(8),
-                              border: Border.all(
-                                color: _useMobileFrame360x690 ? Colors.tealAccent : Colors.white24,
-                              ),
-                            ),
-                            child: Row(
-                              mainAxisSize: MainAxisSize.min,
-                              children: [
-                                Icon(
-                                  _useMobileFrame360x690 ? Icons.check_circle : Icons.aspect_ratio,
-                                  size: 12,
-                                  color: Colors.tealAccent,
-                                ),
-                                const SizedBox(width: 4),
-                                const Text(
-                                  '360×690 Frame',
-                                  style: TextStyle(fontSize: 10, color: Colors.white, fontWeight: FontWeight.bold),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-
-                    PopupMenuButton<UserRole>(
-                      tooltip: 'Quick Role Switcher',
-                      icon: Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryLight.withValues(alpha: 0.25),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.primaryLight.withValues(alpha: 0.6)),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: const [
-                            Text(
-                              'Switch Portal',
-                              style: TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
-                                color: Colors.white,
-                              ),
-                            ),
-                            SizedBox(width: 4),
-                            Icon(Icons.unfold_more, size: 14, color: Colors.white),
-                          ],
-                        ),
-                      ),
-                      onSelected: (newRole) {
-                        state.switchRole(newRole);
-                      },
-                      itemBuilder: (ctx) => UserRole.values.map((r) {
-                        final isCur = r == state.currentUser.role;
-                        return PopupMenuItem<UserRole>(
-                          value: r,
-                          child: Row(
-                            children: [
-                              Icon(
-                                _getRoleIcon(r),
-                                size: 18,
-                                color: isCur ? AppColors.primary : AppColors.textMuted,
-                              ),
-                              const SizedBox(width: 10),
-                              Text(
-                                _isWebPortal(r) ? '${r.shortName} (Web)' : '${r.shortName} (360×690 Mobile)',
-                                style: TextStyle(
-                                  fontWeight: isCur ? FontWeight.w700 : FontWeight.w500,
-                                  color: isCur ? AppColors.primaryDark : AppColors.textDark,
-                                ),
-                              ),
-                            ],
-                          ),
-                        );
-                      }).toList(),
-                    ),
-                  ],
-                ),
-              ),
-              // Segmented Nav Tabs for easy one-tap switching
-              SingleChildScrollView(
-                scrollDirection: Axis.horizontal,
-                padding: const EdgeInsets.fromLTRB(8, 0, 8, 6),
-                child: Row(
-                  children: UserRole.values.map((r) {
-                    final isSelected = r == role;
-                    final isWeb = _isWebPortal(r);
-                    return Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 4),
-                      child: InkWell(
-                        onTap: () => state.switchRole(r),
-                        borderRadius: BorderRadius.circular(20),
-                        child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                          decoration: BoxDecoration(
-                            color: isSelected ? AppColors.primary : Colors.white.withValues(alpha: 0.08),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(
-                              color: isSelected ? AppColors.primaryLight : Colors.transparent,
-                            ),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(_getRoleIcon(r), size: 13, color: isSelected ? Colors.white : Colors.white70),
-                              const SizedBox(width: 6),
-                              Text(
-                                isWeb ? '💻 ${r.shortName} (Web)' : '📱 ${r.shortName} (Mobile)',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
-                                  color: isSelected ? Colors.white : Colors.white70,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-              ),
-            ],
           ),
-        ),
+
+          // Optional Desktop Full-Width Toggle when on widescreen
+          if (isMobileRole && screenWidth >= 768)
+            Positioned(
+              top: MediaQuery.of(context).padding.top + 8,
+              left: 12,
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () {
+                    setState(() => _forceDesktopFullWidth = !_forceDesktopFullWidth);
+                  },
+                  borderRadius: BorderRadius.circular(20),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0F172A).withValues(alpha: 0.85),
+                      borderRadius: BorderRadius.circular(20),
+                      border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _forceDesktopFullWidth ? Icons.smartphone : Icons.fullscreen,
+                          size: 14,
+                          color: Colors.white,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _forceDesktopFullWidth ? 'Mobile Frame' : 'Full Width',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
-  }
-
-  static bool _isWebPortal(UserRole role) {
-    return role == UserRole.laundryWorker ||
-        role == UserRole.regionalAdmin ||
-        role == UserRole.superAdmin;
   }
 
   static IconData _getRoleIcon(UserRole role) {
@@ -352,6 +369,21 @@ class _PortalSwitcherScreenState extends State<PortalSwitcherScreen> {
         return Icons.admin_panel_settings_outlined;
       case UserRole.superAdmin:
         return Icons.public;
+    }
+  }
+
+  static String _getRoleDescription(UserRole role) {
+    switch (role) {
+      case UserRole.customer:
+        return 'Garment catalog, shopping basket, QR tracking & fabric care';
+      case UserRole.driver:
+        return 'GPS navigation, pickup & delivery dispatch missions';
+      case UserRole.laundryWorker:
+        return 'Branch operations, item count verification & thermal receipts';
+      case UserRole.regionalAdmin:
+        return 'Fleet onboarding, laundry contracts & complaints handling';
+      case UserRole.superAdmin:
+        return 'Global catalog editing, financial audit & multi-country control';
     }
   }
 }

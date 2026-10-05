@@ -85,6 +85,7 @@ class _AdminEscalationDialogState extends State<AdminEscalationDialog> {
                   ),
                   child: RadioListTile<WarningLevel>(
                     value: lvl,
+                    // ignore: deprecated_member_use
                     groupValue: _selected,
                     activeColor: lvl.color,
                     title: Text(
@@ -104,6 +105,7 @@ class _AdminEscalationDialogState extends State<AdminEscalationDialog> {
                         color: AppColors.textMuted,
                       ),
                     ),
+                    // ignore: deprecated_member_use
                     onChanged: (val) {
                       if (val != null) setState(() => _selected = val);
                     },

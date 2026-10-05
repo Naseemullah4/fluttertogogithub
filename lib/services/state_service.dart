@@ -686,8 +686,8 @@ class StateService extends ChangeNotifier {
   String _customerScentPreference = 'Royal Jasmine & Oud';
   String _customerPackagingPreference = 'Premium Hangers with Dust Protection Bags';
   String _customerStarchLevel = 'Light Form Starch (Crisp & Comfortable)';
-  final double _customerWalletBalance = 250.0;
-  final int _customerLoyaltyPoints = 480;
+  double _customerWalletBalance = 250.0;
+  int _customerLoyaltyPoints = 480;
 
   String get customerWashPreference => _customerWashPreference;
   String get customerScentPreference => _customerScentPreference;
@@ -695,6 +695,39 @@ class StateService extends ChangeNotifier {
   String get customerStarchLevel => _customerStarchLevel;
   double get customerWalletBalance => _customerWalletBalance;
   int get customerLoyaltyPoints => _customerLoyaltyPoints;
+
+  void topUpCustomerWallet(double amount) {
+    if (amount > 0) {
+      _customerWalletBalance += amount;
+      notifyListeners();
+    }
+  }
+
+  bool payWithCustomerWallet(double amount) {
+    if (_customerWalletBalance >= amount) {
+      _customerWalletBalance -= amount;
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  bool redeemCustomerLoyaltyPoints(int points, double creditReward) {
+    if (_customerLoyaltyPoints >= points) {
+      _customerLoyaltyPoints -= points;
+      _customerWalletBalance += creditReward;
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  void addCustomerLoyaltyPoints(int points) {
+    if (points > 0) {
+      _customerLoyaltyPoints += points;
+      notifyListeners();
+    }
+  }
 
   void updateCustomerProfile({
     required String fullName,
@@ -1546,6 +1579,15 @@ class StateService extends ChangeNotifier {
       laundryName: 'UniWash Pearl & Marina Branch',
       laundryId: 'laundry-doha-01',
     );
+
+    if (paymentMethod == 'wallet') {
+      _customerWalletBalance = (_customerWalletBalance - newOrder.totalAmount).clamp(0.0, double.infinity);
+    }
+    // Award 1 loyalty point per 2 QAR spent
+    final earnedPoints = (newOrder.totalAmount / 2).round();
+    if (earnedPoints > 0) {
+      _customerLoyaltyPoints += earnedPoints;
+    }
 
     _orders.insert(0, newOrder);
     _cart.clear();

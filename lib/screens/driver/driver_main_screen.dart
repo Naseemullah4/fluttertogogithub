@@ -10,6 +10,7 @@ import 'driver_active_ride_screen.dart';
 import 'driver_delivery_success_dialog.dart';
 import 'driver_profile_tab.dart';
 import '../customer/complaints_screen.dart';
+import '../common/order_detail_dialog.dart';
 import '../../widgets/uniwash_logo.dart';
 
 class DriverMainScreen extends StatefulWidget {
@@ -126,6 +127,7 @@ class _DriverMainScreenState extends State<DriverMainScreen>
               );
             },
           ),
+          const SizedBox(width: 68),
         ],
         bottom: TabBar(
           controller: _tabController,
@@ -236,8 +238,13 @@ class _DriverMainScreenState extends State<DriverMainScreen>
               ),
             ],
           ),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () => OrderDetailDialog.show(context, order),
+              borderRadius: BorderRadius.circular(16),
+              child: Padding(
+                padding: const EdgeInsets.all(16),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -679,8 +686,10 @@ class _DriverMainScreenState extends State<DriverMainScreen>
               ],
             ),
           ),
-        );
-      },
+        ),
+      ),
+    );
+  },
     );
   }
 }
