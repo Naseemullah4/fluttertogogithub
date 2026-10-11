@@ -1,4 +1,26 @@
+import 'package:flutter/material.dart';
 import 'laundry.dart';
+
+enum DriverAffiliation {
+  companyFleet(
+    'Company Driver (UniWash Corporate Fleet - Not for Laundry)',
+    'Company Fleet',
+    Icons.business_center_rounded,
+    Color(0xFF1E3A8A),
+  ),
+  laundryDedicated(
+    'Laundry Driver (Assigned to Partner Laundry)',
+    'Laundry Driver',
+    Icons.local_laundry_service_rounded,
+    Color(0xFF047857),
+  );
+
+  final String fullTitle;
+  final String shortBadge;
+  final IconData icon;
+  final Color color;
+  const DriverAffiliation(this.fullTitle, this.shortBadge, this.icon, this.color);
+}
 
 class DriverDocumentFolder {
   final String passportDocumentName;
@@ -32,6 +54,7 @@ class DriverModel {
   final String qidPassportNumber;
   final String assignedLaundryId;
   final String assignedLaundryName;
+  DriverAffiliation affiliation; // Company Fleet (Not for Laundry) vs Laundry Dedicated
   WarningLevel warningStatus;
   bool isApproved;
   bool isOnline;
@@ -52,6 +75,7 @@ class DriverModel {
     required this.qidPassportNumber,
     required this.assignedLaundryId,
     required this.assignedLaundryName,
+    this.affiliation = DriverAffiliation.companyFleet,
     this.warningStatus = WarningLevel.none,
     this.isApproved = true,
     this.isOnline = true,
@@ -93,4 +117,38 @@ class DriverModel {
     if (completedTrips >= 50) return 'Active Courier (1-Star)';
     return 'Cadet Courier';
   }
+}
+
+class DriverDutySession {
+  final String id;
+  final String driverId;
+  final String driverName;
+  final DateTime startedAt;
+  DateTime? endedAt;
+  final String selfiePhoto;
+  final String vanPhoto;
+  final String platePhoto;
+  final String hangerPhoto;
+  final String laundrySetupPhoto;
+  final bool has20Bags;
+  final bool has100Tags;
+  bool isActive;
+
+  DriverDutySession({
+    required this.id,
+    required this.driverId,
+    required this.driverName,
+    required this.startedAt,
+    this.endedAt,
+    required this.selfiePhoto,
+    required this.vanPhoto,
+    required this.platePhoto,
+    required this.hangerPhoto,
+    required this.laundrySetupPhoto,
+    required this.has20Bags,
+    required this.has100Tags,
+    this.isActive = true,
+  });
+
+  int get totalChecklistCompleted => 7; // 5 photos + 2 questions
 }

@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../services/state_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/stat_card.dart';
 
@@ -66,6 +68,8 @@ class _LaundryAnalyticsTabState extends State<LaundryAnalyticsTab> {
 
   @override
   Widget build(BuildContext context) {
+    final state = context.watch<StateService>();
+    final canViewPrice = state.canViewPrice();
     final data = _currentData;
 
     return SingleChildScrollView(
@@ -76,7 +80,10 @@ class _LaundryAnalyticsTabState extends State<LaundryAnalyticsTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text('Financial & Order Analytics', style: TextStyle(fontWeight: FontWeight.w700, fontSize: 16)),
+              Text(
+                canViewPrice ? 'Financial & Order Analytics' : 'Laundry Operations & Wash Performance',
+                style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 16),
+              ),
               DropdownButton<String>(
                 value: _selectedRange,
                 underline: const SizedBox(),
@@ -95,36 +102,67 @@ class _LaundryAnalyticsTabState extends State<LaundryAnalyticsTab> {
             mainAxisSpacing: 12,
             crossAxisSpacing: 12,
             childAspectRatio: 1.35,
-            children: [
-              StatCard(
-                title: 'Gross Revenue',
-                value: data['gross'],
-                subtitle: '$_selectedRange total intake',
-                icon: Icons.monetization_on,
-                iconColor: AppColors.primary,
-              ),
-              StatCard(
-                title: 'Net Laundry Payout',
-                value: data['net'],
-                subtitle: 'After 15% platform commission',
-                icon: Icons.account_balance,
-                iconColor: AppColors.success,
-              ),
-              StatCard(
-                title: 'Total Orders',
-                value: data['orders'],
-                subtitle: '${data['completed']} completed, ${data['pending']} pending',
-                icon: Icons.inventory_2,
-                iconColor: AppColors.accent,
-              ),
-              StatCard(
-                title: 'Platform Royalty (15%)',
-                value: data['commission'],
-                subtitle: 'Contractually settled monthly',
-                icon: Icons.pie_chart,
-                iconColor: AppColors.secondary,
-              ),
-            ],
+            children: canViewPrice
+                ? [
+                    StatCard(
+                      title: 'Gross Revenue',
+                      value: data['gross'],
+                      subtitle: '$_selectedRange total intake',
+                      icon: Icons.monetization_on,
+                      iconColor: AppColors.primary,
+                    ),
+                    StatCard(
+                      title: 'Net Laundry Payout',
+                      value: data['net'],
+                      subtitle: 'After 15% platform commission',
+                      icon: Icons.account_balance,
+                      iconColor: AppColors.success,
+                    ),
+                    StatCard(
+                      title: 'Total Orders',
+                      value: data['orders'],
+                      subtitle: '${data['completed']} completed, ${data['pending']} pending',
+                      icon: Icons.inventory_2,
+                      iconColor: AppColors.accent,
+                    ),
+                    StatCard(
+                      title: 'Platform Royalty (15%)',
+                      value: data['commission'],
+                      subtitle: 'Contractually settled monthly',
+                      icon: Icons.pie_chart,
+                      iconColor: AppColors.secondary,
+                    ),
+                  ]
+                : [
+                    StatCard(
+                      title: 'Orders Processed',
+                      value: data['orders'],
+                      subtitle: '${data['completed']} completed, ${data['pending']} in wash',
+                      icon: Icons.inventory_2,
+                      iconColor: AppColors.primary,
+                    ),
+                    StatCard(
+                      title: 'Wash & Steam Units',
+                      value: '${(int.tryParse(data['orders'].toString().replaceAll(',', '')) ?? 100) * 4} Pcs',
+                      subtitle: '$_selectedRange garment throughput',
+                      icon: Icons.local_laundry_service,
+                      iconColor: AppColors.accent,
+                    ),
+                    StatCard(
+                      title: 'Turnaround Compliance',
+                      value: '99.4%',
+                      subtitle: 'Dispatched within 24h SLA',
+                      icon: Icons.verified_outlined,
+                      iconColor: AppColors.success,
+                    ),
+                    StatCard(
+                      title: 'Quality QA Score',
+                      value: '99.8%',
+                      subtitle: 'Zero garment damage reports',
+                      icon: Icons.stars_rounded,
+                      iconColor: AppColors.secondary,
+                    ),
+                  ],
           ),
           const SizedBox(height: 20),
           Container(

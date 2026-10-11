@@ -97,26 +97,34 @@ class _AddressPickerSheetState extends State<AddressPickerSheet> {
             ),
             const SizedBox(height: 16),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Delivery Address Onboarding',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.textDark,
+                const Expanded(
+                  child: Text(
+                    'Delivery Address',
+                    style: TextStyle(
+                      fontSize: 17,
+                      fontWeight: FontWeight.w800,
+                      color: AppColors.textDark,
+                    ),
                   ),
                 ),
                 TextButton.icon(
+                  style: TextButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    visualDensity: VisualDensity.compact,
+                  ),
                   onPressed: _isGpsPinpointing ? null : _simulateGpsPinpoint,
                   icon: _isGpsPinpointing
                       ? const SizedBox(
-                          width: 14,
-                          height: 14,
+                          width: 13,
+                          height: 13,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(Icons.my_location, size: 16),
-                  label: const Text('GPS Auto-Pinpoint'),
+                      : const Icon(Icons.my_location, size: 15, color: AppColors.primary),
+                  label: const Text(
+                    'GPS Auto',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+                  ),
                 ),
               ],
             ),

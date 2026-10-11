@@ -16,10 +16,11 @@ class StatCard extends StatelessWidget {
     required this.value,
     this.subtitle,
     required this.icon,
-    this.iconColor = AppColors.primary,
+    Color? iconColor,
+    Color? color,
     this.backgroundColor,
     this.onTap,
-  });
+  }) : iconColor = color ?? iconColor ?? AppColors.primary;
 
   @override
   Widget build(BuildContext context) {

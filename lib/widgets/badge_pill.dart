@@ -6,35 +6,41 @@ class BadgePill extends StatelessWidget {
   final Color textColor;
   final IconData? icon;
 
-  const BadgePill({
+  BadgePill({
     super.key,
     required this.label,
-    required this.backgroundColor,
-    required this.textColor,
+    Color? backgroundColor,
+    Color? textColor,
+    Color? color,
     this.icon,
-  });
+  })  : backgroundColor = backgroundColor ?? (color != null ? color.withValues(alpha: 0.12) : const Color(0xFFF1F5F9)),
+        textColor = textColor ?? (color ?? const Color(0xFF334155));
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
       decoration: BoxDecoration(
         color: backgroundColor,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(16),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           if (icon != null) ...[
-            Icon(icon, size: 13, color: textColor),
+            Icon(icon, size: 12, color: textColor),
             const SizedBox(width: 4),
           ],
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              color: textColor,
+          Flexible(
+            child: Text(
+              label,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w700,
+                color: textColor,
+              ),
             ),
           ),
         ],

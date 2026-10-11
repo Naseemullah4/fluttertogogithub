@@ -14,11 +14,11 @@ import 'laundry_item_verification_dialog.dart';
 import 'laundry_thermal_invoice_dialog.dart';
 import 'laundry_analytics_tab.dart';
 import 'laundry_driver_onboard_dialog.dart';
-import 'laundry_assign_driver_dialog.dart';
 import 'laundry_attachments_dialog.dart';
 import 'laundry_drivers_fleet_tab.dart';
 import '../customer/complaints_screen.dart';
 import '../../widgets/uniwash_logo.dart';
+import '../../widgets/bulk_qr_generator_dialog.dart';
 
 class LaundryMainScreen extends StatefulWidget {
   const LaundryMainScreen({super.key});
@@ -84,7 +84,22 @@ class _LaundryMainScreenState extends State<LaundryMainScreen> with SingleTicker
               onOrderSelected: (order) => OrderDetailDialog.show(context, order),
             ),
           ),
-          const SizedBox(width: 12),
+          // Bulk QR Generator & Thermal Tag Printing Tool
+          ElevatedButton.icon(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF0F172A),
+              foregroundColor: Colors.white,
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            ),
+            icon: const Icon(Icons.qr_code_2_rounded, size: 16),
+            label: Text(
+              isAr ? 'طباعة الباركود والـ QR' : 'Bulk QR Generator 🏷️',
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700),
+            ),
+            onPressed: () => BulkQrGeneratorDialog.show(context),
+          ),
+          const SizedBox(width: 8),
 
           IconButton(
             icon: const Icon(Icons.person_add_alt_1_outlined, color: AppColors.primary),
@@ -225,7 +240,7 @@ class _LaundryMainScreenState extends State<LaundryMainScreen> with SingleTicker
                               state.acceptOrder(order.id);
                               ScaffoldMessenger.of(context).showSnackBar(
                                 SnackBar(
-                                  content: Text('✅ Order #${order.orderNumber} Accepted by Laundry! Now assign driver for pickup.'),
+                                  content: Text('✅ Order #${order.orderNumber} Accepted by Laundry!'),
                                   backgroundColor: AppColors.success,
                                 ),
                               );
@@ -293,10 +308,24 @@ class _LaundryMainScreenState extends State<LaundryMainScreen> with SingleTicker
                       'Customer: ${order.customerName} (${order.customerPhone})',
                       style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 13),
                     ),
-                    Text(
-                      state.formatCurrency(order.totalAmount),
-                      style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Color(0xFF0F172A)),
-                    ),
+                    if (state.canViewPrice())
+                      Text(
+                        state.formatCurrency(order.totalAmount),
+                        style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Color(0xFF0F172A)),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFF1F5F9),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: const Color(0xFFE2E8F0)),
+                        ),
+                        child: Text(
+                          '${order.totalItemCount} Items • ${order.paymentMethod.toUpperCase()}',
+                          style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF0F172A)),
+                        ),
+                      ),
                   ],
                 ),
                 const SizedBox(height: 4),
@@ -339,8 +368,8 @@ class _LaundryMainScreenState extends State<LaundryMainScreen> with SingleTicker
                               children: [
                                 Text(
                                   order.assignedDriverId.isEmpty
-                                      ? (isAr ? 'لم يتم تعيين سائق بعد' : 'Driver Not Assigned Yet')
-                                      : '${isAr ? "السائق المعين" : "Assigned Driver"}: ${order.assignedDriverName}',
+                                      ? (isAr ? 'السائق: غير معين (بانتظار تعيين الإدارة)' : 'Driver: Awaiting Admin Assignment')
+                                      : '${isAr ? "السائق المعين (من الإدارة)" : "Assigned Driver (Dispatched by Admin)"}: ${order.assignedDriverName}',
                                   style: TextStyle(
                                     fontWeight: FontWeight.w800,
                                     fontSize: 13,
@@ -402,7 +431,7 @@ class _LaundryMainScreenState extends State<LaundryMainScreen> with SingleTicker
                               ),
                             ] else ...[
                               Text(
-                                isAr ? 'يرجى تعيين سائق لنقل الطلب إلى وحدة التحكم المحمولة للسائق' : 'Assign a driver now to shift mission to their mobile dispatch dashboard',
+                                isAr ? 'يتم تعيين السائق مباشرة بواسطة إدارة المنصة وليس المصبغة' : 'Driver assignment is handled directly by Platform Admin, not Laundry.',
                                 style: const TextStyle(fontSize: 11, color: AppColors.textMuted),
                               ),
                             ],
@@ -411,65 +440,52 @@ class _LaundryMainScreenState extends State<LaundryMainScreen> with SingleTicker
                       ),
                       const SizedBox(width: 8),
 
-                      // Action Buttons: Assign / Reassign Driver + Urgent Ping Button
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          ElevatedButton.icon(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: order.assignedDriverId.isEmpty ? AppColors.primary : const Color(0xFF0F172A),
-                              foregroundColor: Colors.white,
-                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                            ),
-                            onPressed: () => LaundryAssignDriverDialog.show(context, order),
-                            icon: Icon(order.assignedDriverId.isEmpty ? Icons.person_add : Icons.sync, size: 14),
-                            label: Text(
-                              order.assignedDriverId.isEmpty
-                                  ? (isAr ? 'تعيين سائق' : 'Assign Driver')
-                                  : (isAr ? 'تغيير السائق' : 'Reassign'),
-                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700),
-                            ),
+                      // Urgent Ping Button (if driver assigned)
+                      if (order.assignedDriverId.isNotEmpty) ...[
+                        ElevatedButton.icon(
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: const Color(0xFFFEF3C7),
+                            foregroundColor: const Color(0xFF92400E),
+                            elevation: 0,
+                            side: const BorderSide(color: Color(0xFFFDE68A)),
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
                           ),
-                          if (order.assignedDriverId.isNotEmpty) ...[
-                            const SizedBox(width: 6),
-                            ElevatedButton.icon(
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFFFEF3C7),
-                                foregroundColor: const Color(0xFF92400E),
-                                elevation: 0,
-                                side: const BorderSide(color: Color(0xFFFDE68A)),
-                                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
+                          onPressed: () {
+                            state.pingDriver(order.id);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Row(
+                                  children: [
+                                    const Icon(Icons.notifications_active, color: Colors.white, size: 18),
+                                    const SizedBox(width: 8),
+                                    Text('🔔 Urgent Nudge sent to ${order.assignedDriverName}! (Ping #${order.driverPingCount})'),
+                                  ],
+                                ),
+                                backgroundColor: const Color(0xFFB45309),
                               ),
-                              onPressed: () {
-                                state.pingDriver(order.id);
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Row(
-                                      children: [
-                                        const Icon(Icons.notifications_active, color: Colors.white),
-                                        const SizedBox(width: 8),
-                                        Text(
-                                          '🔔 Urgent Ping #${order.driverPingCount} sent to ${order.assignedDriverName}! Driver console alerted.',
-                                          style: const TextStyle(fontWeight: FontWeight.w700),
-                                        ),
-                                      ],
-                                    ),
-                                    backgroundColor: const Color(0xFFB45309),
-                                    duration: const Duration(seconds: 2),
-                                  ),
-                                );
-                              },
-                              icon: const Icon(Icons.notifications_active, size: 15),
-                              label: Text(
-                                isAr ? 'تنبيه السائق' : 'Ping Driver',
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
+                            );
+                          },
+                          icon: const Icon(Icons.notifications_active_outlined, size: 14),
+                          label: Text(
+                            isAr ? 'تنبيه السائق' : 'Urgent Ping',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800),
+                          ),
+                        ),
+                      ] else ...[
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFF1F5F9),
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: const Color(0xFFE2E8F0)),
+                          ),
+                          child: Text(
+                            isAr ? 'الإدارة تُعيّن' : 'Admin Assigns',
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w800, color: Color(0xFF475569)),
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
@@ -729,10 +745,23 @@ class _LaundryMainScreenState extends State<LaundryMainScreen> with SingleTicker
                             Column(
                               crossAxisAlignment: CrossAxisAlignment.end,
                               children: [
-                                Text(
-                                  state.formatCurrency(order.totalAmount),
-                                  style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Color(0xFF0F172A)),
-                                ),
+                                if (state.canViewPrice())
+                                  Text(
+                                    state.formatCurrency(order.totalAmount),
+                                    style: const TextStyle(fontWeight: FontWeight.w900, fontSize: 15, color: Color(0xFF0F172A)),
+                                  )
+                                else
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(6),
+                                    ),
+                                    child: Text(
+                                      '${order.totalItemCount} Garments',
+                                      style: const TextStyle(fontWeight: FontWeight.w700, fontSize: 12, color: Color(0xFF0F172A)),
+                                    ),
+                                  ),
                                 const SizedBox(height: 6),
                                 Row(
                                   mainAxisSize: MainAxisSize.min,

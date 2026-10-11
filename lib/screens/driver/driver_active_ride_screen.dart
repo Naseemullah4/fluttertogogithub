@@ -4,9 +4,12 @@ import '../../models/order.dart';
 import '../../services/state_service.dart';
 import '../../theme/app_colors.dart';
 import '../../utils/driver_navigation_helper.dart';
-import 'driver_delivery_success_dialog.dart';
-import 'driver_qr_scanner_dialog.dart';
 import 'driver_report_issue_dialog.dart';
+import 'driver_cancel_order_dialog.dart';
+import 'driver_collection_workflow_screen.dart';
+import 'driver_laundry_arrival_screen.dart';
+import 'driver_delivery_loading_screen.dart';
+import 'driver_delivery_workflow_screen.dart';
 import '../customer/complaints_screen.dart';
 import '../../widgets/uniwash_logo.dart';
 
@@ -38,6 +41,16 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
           ],
         ),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.cancel_outlined, color: AppColors.error),
+            tooltip: 'Cancel Order Mission',
+            onPressed: () async {
+              final cancelled = await DriverCancelOrderDialog.show(context, order);
+              if (cancelled == true && context.mounted) {
+                Navigator.pop(context);
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.report_problem_outlined, color: AppColors.error),
             tooltip: 'Report Issue / Breakdown',
@@ -378,24 +391,15 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
               height: 52,
               child: ElevatedButton.icon(
                 onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (_) => DriverQrScannerDialog(
-                      order: order,
-                      onVerified: () {
-                        state.updateOrderStatus(order.id, OrderStatus.pickedUp);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('✅ Garments collected and QR verified! Now dispatching to laundry.'),
-                            backgroundColor: AppColors.success,
-                          ),
-                        );
-                      },
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DriverCollectionWorkflowScreen(order: order),
                     ),
                   );
                 },
                 icon: const Icon(Icons.qr_code_scanner),
-                label: const Text('Verify QR & Collect Order', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                label: const Text('Open Collection Workflow (4 Steps)', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
               ),
             ),
           ],
@@ -410,16 +414,15 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
         child: ElevatedButton.icon(
           style: ElevatedButton.styleFrom(backgroundColor: AppColors.statusLaundry),
           onPressed: () {
-            state.updateOrderStatus(order.id, OrderStatus.inLaundry);
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(
-                content: Text('🏢 Order Dispatched to Laundry facility! Awaiting staff count verification.'),
-                backgroundColor: AppColors.primary,
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => DriverLaundryArrivalScreen(orders: [order]),
               ),
             );
           },
           icon: const Icon(Icons.local_laundry_service),
-          label: const Text('Order Dispatched to Laundry', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+          label: const Text('Handover to Laundry Facility', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
         ),
       );
     }
@@ -453,16 +456,15 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
         child: ElevatedButton.icon(
           style: ElevatedButton.styleFrom(backgroundColor: AppColors.statusDelivery),
           onPressed: () {
-            state.startDriverRide(order.id);
-            state.updateOrderStatus(order.id, OrderStatus.outForDelivery);
-            DriverNavigationHelper.showMapChoiceSheet(
+            Navigator.push(
               context,
-              address: order.address.formatted,
-              title: 'Navigate to Delivery Address',
+              MaterialPageRoute(
+                builder: (_) => DriverDeliveryLoadingScreen(orders: [order]),
+              ),
             );
           },
           icon: const Icon(Icons.delivery_dining),
-          label: const Text('Start Delivery Ride to Customer (Open GPS)', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+          label: const Text('Load Van at Laundry (4 Steps)', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
         ),
       );
     }
@@ -520,22 +522,15 @@ class _DriverActiveRideScreenState extends State<DriverActiveRideScreen> {
               child: ElevatedButton.icon(
                 style: ElevatedButton.styleFrom(backgroundColor: AppColors.success),
                 onPressed: () {
-                  state.updateOrderStatus(order.id, OrderStatus.delivered);
-                  showDialog(
-                    context: context,
-                    barrierDismissible: false,
-                    builder: (dialogCtx) => DriverDeliverySuccessDialog(
-                      order: order,
-                      earnedBonusQar: 1.0,
-                      onBackToDashboard: () {
-                        Navigator.pop(dialogCtx);
-                        Navigator.pop(context);
-                      },
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => DriverDeliveryWorkflowScreen(order: order),
                     ),
                   );
                 },
-                icon: const Icon(Icons.check_circle),
-                label: const Text('Complete Handover & Deliver Order', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
+                icon: const Text('😊', style: TextStyle(fontSize: 14)),
+                label: const Text('Deliver Order (5 Steps)', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700)),
               ),
             ),
           ],

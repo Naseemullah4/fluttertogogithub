@@ -17,9 +17,9 @@ extension OrderStatusExtension on OrderStatus {
   String get displayName {
     switch (this) {
       case OrderStatus.placed:
-        return 'Order Placed';
+        return 'Order Placed (Sent to Admin)';
       case OrderStatus.driverAssigned:
-        return 'Driver En-Route for Pickup';
+        return 'Driver Assigned by Admin';
       case OrderStatus.pickedUp:
         return 'Picked Up & In Transit to Laundry';
       case OrderStatus.inLaundry:
@@ -151,13 +151,13 @@ class LaundryOrder {
   final int orderNumber;
   final String customerName;
   final String customerPhone;
-  final CustomerAddress address;
+  CustomerAddress address;
   final List<OrderItem> items;
   OrderStatus status;
   final double deliveryFee;
   final String paymentMethod; // 'cash', 'pos_card', 'online'
   String paymentStatus; // 'pending', 'paid'
-  final String specialInstructions;
+  String specialInstructions;
   final DateTime createdAt;
   String assignedDriverId;
   String assignedDriverName;
@@ -176,6 +176,62 @@ class LaundryOrder {
   String? laundryReview;
   String? driverReview;
 
+  // Driver Workflow Tracking
+  DriverWorkflowStep workflowStep;
+
+  // 1. Collection Phase
+  DateTime? collectionStartedAt;
+  bool collectionQrScanned;
+  DateTime? collectionQrScannedAt;
+  String? collectionProofPhoto;
+  DateTime? collectionProofUploadedAt;
+  DateTime? collectionCompletedAt;
+
+  // 2. Laundry Arrival Phase
+  DateTime? arrivedAtLaundryAt;
+  bool laundryQrScanned;
+  DateTime? laundryQrScannedAt;
+  String? laundryProofPhoto;
+  DateTime? dispatchedToLaundryAt;
+
+  // 3. Delivery Loading Phase
+  DateTime? deliveryLoadingStartedAt;
+  bool deliveryLoadingQrScanned;
+  bool deliveryLoadedInVan;
+  String? deliveryLoadingBagHangerPhoto;
+  String? deliveryLoadingPlatePhoto;
+  String? deliveryLoadingLaundryPhoto;
+
+  // 4. Delivery Phase
+  DateTime? deliveryStartedAt;
+  bool deliveryQrScanned;
+  DateTime? deliveryQrScannedAt;
+  String? deliveryProofPhoto;
+  DateTime? deliveryProofUploadedAt;
+  String? deliveryLocation;
+  String? deliveryLocationNote;
+  DateTime? deliveredAt;
+  double? earnedBonus;
+
+  // 5. Cancellation
+  OrderCancellationRecord? cancellationRecord;
+
+  // 6. Garment Tags & QR Code Management
+  List<String> tags;
+  String? customQrTag;
+
+  // 7. Scheduling & Customer Service Controls
+  DateTime? scheduledPickupDate;
+  String? scheduledPickupSlot;
+  DateTime? scheduledDeliveryDate;
+  String? scheduledDeliverySlot;
+  List<String> customerContactNotes;
+  bool isCustomerVerified;
+
+  // 8. Urgent Order & Express Rush Turnaround
+  bool isUrgent;
+  double urgentFee;
+
   LaundryOrder({
     required this.id,
     required this.orderNumber,
@@ -190,12 +246,12 @@ class LaundryOrder {
     this.specialInstructions = '',
     required this.createdAt,
     this.assignedDriverId = '',
-    this.assignedDriverName = 'Tariq Al-Mansoor',
-    this.assignedDriverPhone = '+974 5512 8900',
+    this.assignedDriverName = 'Unassigned',
+    this.assignedDriverPhone = '',
     this.laundryName = 'UniWash Pearl Branch',
     this.laundryId = 'laundry-doha-01',
     this.isCountVerifiedByLaundry = false,
-    this.isAcceptedByLaundry = true,
+    this.isAcceptedByLaundry = false,
     this.isDriverRideStarted = false,
     this.driverRideStartedAt,
     this.driverPingCount = 0,
@@ -205,11 +261,186 @@ class LaundryOrder {
     this.driverRating,
     this.laundryReview,
     this.driverReview,
-  }) : attachments = attachments ?? [];
+    this.workflowStep = DriverWorkflowStep.assigned,
+    this.collectionStartedAt,
+    this.collectionQrScanned = false,
+    this.collectionQrScannedAt,
+    this.collectionProofPhoto,
+    this.collectionProofUploadedAt,
+    this.collectionCompletedAt,
+    this.arrivedAtLaundryAt,
+    this.laundryQrScanned = false,
+    this.laundryQrScannedAt,
+    this.laundryProofPhoto,
+    this.dispatchedToLaundryAt,
+    this.deliveryLoadingStartedAt,
+    this.deliveryLoadingQrScanned = false,
+    this.deliveryLoadedInVan = false,
+    this.deliveryLoadingBagHangerPhoto,
+    this.deliveryLoadingPlatePhoto,
+    this.deliveryLoadingLaundryPhoto,
+    this.deliveryStartedAt,
+    this.deliveryQrScanned = false,
+    this.deliveryQrScannedAt,
+    this.deliveryProofPhoto,
+    this.deliveryProofUploadedAt,
+    this.deliveryLocation,
+    this.deliveryLocationNote,
+    this.deliveredAt,
+    this.earnedBonus,
+    this.cancellationRecord,
+    List<String>? tags,
+    this.customQrTag,
+    this.scheduledPickupDate,
+    this.scheduledPickupSlot,
+    this.scheduledDeliveryDate,
+    this.scheduledDeliverySlot,
+    List<String>? customerContactNotes,
+    this.isCustomerVerified = false,
+    this.isUrgent = false,
+    this.urgentFee = 25.0,
+  })  : attachments = attachments ?? [],
+        tags = tags ?? [],
+        customerContactNotes = customerContactNotes ?? [];
 
   double get subtotal => items.fold(0.0, (sum, item) => sum + item.effectiveTotal);
-  double get totalAmount => subtotal + deliveryFee;
+  double get totalAmount => subtotal + deliveryFee + (isUrgent ? urgentFee : 0.0);
   int get totalItemCount => items.fold(0, (sum, item) => sum + (item.verifiedQuantity ?? item.quantity));
 
-  String get qrCodePayload => 'UNIWASH-ORD-$orderNumber-$customerPhone';
+  String get scheduleSummary {
+    final pSlot = scheduledPickupSlot ?? 'Standard Slot';
+    final dSlot = scheduledDeliverySlot ?? (isUrgent ? '⚡ Express 4-Hour' : 'Standard Next-Day');
+    return 'Pickup: $pSlot • Drop-off: $dSlot';
+  }
+
+  String get qrCodePayload => customQrTag ?? 'UNIWASH-ORD-$orderNumber-$customerPhone';
+  set qrCodePayload(String value) => customQrTag = value;
+}
+
+enum DriverWorkflowStep {
+  assigned,
+  collectionStarted,
+  collectionQrScanned,
+  collectionProofUploaded,
+  collectionCompleted,
+  receivedAtLaundry,
+  laundryQrScanCompleted,
+  laundryProofUploaded,
+  dispatchedToLaundry,
+  deliveryStarted,
+  orderScannedForDelivery,
+  loadedInVan,
+  deliveryStartedForOrder,
+  deliveryProofUploaded,
+  deliveryLocationSelected,
+  delivered,
+  cancelled,
+}
+
+extension DriverWorkflowStepExtension on DriverWorkflowStep {
+  String get displayName {
+    switch (this) {
+      case DriverWorkflowStep.assigned:
+        return 'Order Assigned';
+      case DriverWorkflowStep.collectionStarted:
+        return 'Collection Started';
+      case DriverWorkflowStep.collectionQrScanned:
+        return 'QR Code Scanned';
+      case DriverWorkflowStep.collectionProofUploaded:
+        return 'Collection Proof Uploaded';
+      case DriverWorkflowStep.collectionCompleted:
+        return 'Collection Completed';
+      case DriverWorkflowStep.receivedAtLaundry:
+        return 'Received at Laundry';
+      case DriverWorkflowStep.laundryQrScanCompleted:
+        return 'Laundry QR Scan Completed';
+      case DriverWorkflowStep.laundryProofUploaded:
+        return 'Laundry Proof Uploaded';
+      case DriverWorkflowStep.dispatchedToLaundry:
+        return 'Dispatched to Laundry';
+      case DriverWorkflowStep.deliveryStarted:
+        return 'Delivery Started';
+      case DriverWorkflowStep.orderScannedForDelivery:
+        return 'Order Scanned for Delivery';
+      case DriverWorkflowStep.loadedInVan:
+        return 'Loaded in Van';
+      case DriverWorkflowStep.deliveryStartedForOrder:
+        return 'Delivery Started for Order';
+      case DriverWorkflowStep.deliveryProofUploaded:
+        return 'Delivery Proof Uploaded';
+      case DriverWorkflowStep.deliveryLocationSelected:
+        return 'Delivery Location Selected';
+      case DriverWorkflowStep.delivered:
+        return 'Order Delivered';
+      case DriverWorkflowStep.cancelled:
+        return 'Order Cancelled';
+    }
+  }
+
+  int get orderProgressIndex {
+    switch (this) {
+      case DriverWorkflowStep.assigned:
+        return 0;
+      case DriverWorkflowStep.collectionStarted:
+        return 1;
+      case DriverWorkflowStep.collectionQrScanned:
+        return 2;
+      case DriverWorkflowStep.collectionProofUploaded:
+        return 3;
+      case DriverWorkflowStep.collectionCompleted:
+        return 4;
+      case DriverWorkflowStep.receivedAtLaundry:
+        return 5;
+      case DriverWorkflowStep.laundryQrScanCompleted:
+        return 6;
+      case DriverWorkflowStep.laundryProofUploaded:
+        return 7;
+      case DriverWorkflowStep.dispatchedToLaundry:
+        return 8;
+      case DriverWorkflowStep.deliveryStarted:
+        return 9;
+      case DriverWorkflowStep.orderScannedForDelivery:
+        return 10;
+      case DriverWorkflowStep.loadedInVan:
+        return 11;
+      case DriverWorkflowStep.deliveryStartedForOrder:
+        return 12;
+      case DriverWorkflowStep.deliveryProofUploaded:
+        return 13;
+      case DriverWorkflowStep.deliveryLocationSelected:
+        return 14;
+      case DriverWorkflowStep.delivered:
+        return 15;
+      case DriverWorkflowStep.cancelled:
+        return -1;
+    }
+  }
+}
+
+class OrderCancellationRecord {
+  final String orderId;
+  final String driverId;
+  final String driverName;
+  final String reasonCategory; // 'Customer-Related', 'Driver/Company-Related', 'Customer Service Action'
+  final String reason;
+  final String? customDescription;
+  final String locationPhoto;
+  final String callLogPhoto;
+  final List<String> additionalPhotos;
+  final DateTime cancelledAt;
+  final String? cancelledBy;
+
+  const OrderCancellationRecord({
+    required this.orderId,
+    this.driverId = 'CS-DISPATCH',
+    this.driverName = 'Customer Service Agent',
+    this.reasonCategory = 'Customer Service Action',
+    required this.reason,
+    this.customDescription,
+    this.locationPhoto = '',
+    this.callLogPhoto = '',
+    this.additionalPhotos = const [],
+    required this.cancelledAt,
+    this.cancelledBy,
+  });
 }

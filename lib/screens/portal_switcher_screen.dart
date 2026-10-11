@@ -8,7 +8,10 @@ import 'driver/driver_main_screen.dart';
 import 'laundry/laundry_main_screen.dart';
 import 'admin/admin_main_screen.dart';
 import 'super_admin/super_admin_main_screen.dart';
+import 'customer_service/customer_service_main_screen.dart';
+import 'engineer/engineer_main_screen.dart';
 import '../widgets/uniwash_logo.dart';
+import '../widgets/bulk_qr_generator_dialog.dart';
 
 class PortalSwitcherScreen extends StatefulWidget {
   const PortalSwitcherScreen({super.key});
@@ -187,6 +190,46 @@ class _PortalSwitcherScreenState extends State<PortalSwitcherScreen> {
                   ),
                 );
               }),
+              const SizedBox(height: 12),
+              const Divider(color: Colors.white12, height: 1),
+              const SizedBox(height: 12),
+              InkWell(
+                onTap: () {
+                  Navigator.pop(ctx);
+                  BulkQrGeneratorDialog.show(context);
+                },
+                borderRadius: BorderRadius.circular(12),
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white10,
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.white24),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.qr_code_2_rounded, color: Colors.tealAccent, size: 22),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              'Bulk QR Generator & Thermal Printer Studio 🏷️',
+                              style: TextStyle(color: Colors.white, fontWeight: FontWeight.w700, fontSize: 13),
+                            ),
+                            Text(
+                              'Generate & print batch tags for garments, wash bags & racks',
+                              style: TextStyle(color: Colors.white60, fontSize: 11),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Icon(Icons.arrow_forward_ios, color: Colors.white38, size: 12),
+                    ],
+                  ),
+                ),
+              ),
             ],
           ),
         ),
@@ -217,6 +260,12 @@ class _PortalSwitcherScreenState extends State<PortalSwitcherScreen> {
         break;
       case UserRole.superAdmin:
         currentPortal = const SuperAdminMainScreen();
+        break;
+      case UserRole.customerService:
+        currentPortal = const CustomerServiceMainScreen();
+        break;
+      case UserRole.engineer:
+        currentPortal = const EngineerMainScreen();
         break;
     }
 
@@ -369,6 +418,10 @@ class _PortalSwitcherScreenState extends State<PortalSwitcherScreen> {
         return Icons.admin_panel_settings_outlined;
       case UserRole.superAdmin:
         return Icons.public;
+      case UserRole.customerService:
+        return Icons.support_agent_rounded;
+      case UserRole.engineer:
+        return Icons.engineering_rounded;
     }
   }
 
@@ -384,6 +437,10 @@ class _PortalSwitcherScreenState extends State<PortalSwitcherScreen> {
         return 'Fleet onboarding, laundry contracts & complaints handling';
       case UserRole.superAdmin:
         return 'Global catalog editing, financial audit & multi-country control';
+      case UserRole.customerService:
+        return 'Order tracking, reschedule, reassign, add/delete, tags & customer contact';
+      case UserRole.engineer:
+        return 'App bugs, stack trace diagnostics, QR scanner fixes & sync telemetry';
     }
   }
 }

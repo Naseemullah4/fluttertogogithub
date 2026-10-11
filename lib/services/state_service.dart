@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import '../models/catalog_item.dart';
 import '../models/order_item.dart';
 import '../models/order.dart';
@@ -11,6 +12,12 @@ import '../models/event_offer.dart';
 import '../models/advertisement.dart';
 import '../models/app_popup_offer.dart';
 import '../models/occasion_theme.dart';
+import '../models/country_branch.dart';
+import '../models/admin_team.dart';
+import '../models/order_problem.dart';
+import '../models/audit_log.dart';
+import '../models/system_bug.dart';
+import '../models/wallet_transaction.dart';
 import 'catalog_data.dart';
 import 'localization_service.dart';
 
@@ -44,6 +51,23 @@ class StateService extends ChangeNotifier {
         ? current.currencySymbolAr 
         : current.currencySymbol;
     return '${converted.toStringAsFixed(converted.truncateToDouble() == converted ? 0 : 2)} $sym';
+  }
+
+  /// Price visibility rule:
+  /// Prices are ONLY visible to Customer, Regional Admin, and Super Admin.
+  /// Laundry staff, drivers, support, and all other roles cannot see prices.
+  bool canViewPrice([UserRole? role]) {
+    final targetRole = role ?? _currentUser.role;
+    return targetRole == UserRole.customer ||
+           targetRole == UserRole.regionalAdmin ||
+           targetRole == UserRole.superAdmin;
+  }
+
+  String formatRestrictedPrice(double qarAmount, {UserRole? role, String hiddenPlaceholder = '—'}) {
+    if (canViewPrice(role)) {
+      return formatCurrency(qarAmount);
+    }
+    return hiddenPlaceholder;
   }
 
   // Current Active User
@@ -106,6 +130,26 @@ class StateService extends ChangeNotifier {
           email: 'superadmin@uniwash.global',
           phone: '+974 4000 0000',
           role: UserRole.superAdmin,
+          countryCode: 'GLOBAL',
+        );
+        break;
+      case UserRole.customerService:
+        _currentUser = const AppUser(
+          id: 'user_cs_01',
+          fullName: 'Sara Mansoor (CS Operations Lead)',
+          email: 'support.lead@uniwash.qa',
+          phone: '+974 4499 1003',
+          role: UserRole.customerService,
+          countryCode: 'QAT',
+        );
+        break;
+      case UserRole.engineer:
+        _currentUser = const AppUser(
+          id: 'user_eng_01',
+          fullName: 'Eng. Zaid Mansoori (Tech & QA Engineer)',
+          email: 'zaid.eng@uniwash.qa',
+          phone: '+974 5544 3322',
+          role: UserRole.engineer,
           countryCode: 'GLOBAL',
         );
         break;
@@ -173,6 +217,7 @@ class StateService extends ChangeNotifier {
   }
 
   // Event & Seasonal Offers Engine (Ramadan, Eid, National Days, Summer, Back to School, Big Offers)
+  // Initially inactive by default — only display on customer app when explicitly enabled or created by Admin
   final List<EventOffer> _eventOffers = [
     EventOffer(
       id: 'offer_ramadan',
@@ -187,7 +232,7 @@ class StateService extends ChangeNotifier {
       description: '25% OFF on all Traditional Thobes, Abayas & Prayer Rugs wash & iron.',
       descriptionAr: 'خصم 25% على غسيل وكوي الثياب التقليدية والعبايات وسجاد الصلاة.',
       bannerColor: const Color(0xFF0F766E),
-      isActive: true,
+      isActive: false,
       validFrom: DateTime.now().subtract(const Duration(days: 5)),
       validUntil: DateTime.now().add(const Duration(days: 25)),
     ),
@@ -204,7 +249,7 @@ class StateService extends ChangeNotifier {
       description: '30% OFF on Formal Suits, Silk Dresses, Bisht & Festive Attire.',
       descriptionAr: 'خصم 30% على البدل الرسمية، فساتين الحرير، البشوت والملابس الاحتفالية.',
       bannerColor: const Color(0xFF7C3AED),
-      isActive: true,
+      isActive: false,
       validFrom: DateTime.now().subtract(const Duration(days: 2)),
       validUntil: DateTime.now().add(const Duration(days: 10)),
     ),
@@ -221,7 +266,7 @@ class StateService extends ChangeNotifier {
       description: '25% OFF Winter Jackets, Woolen Blankets, Quilts & Linens.',
       descriptionAr: 'خصم 25% على المعاطف الشتوية، البطانيات الصوفية والمفارش.',
       bannerColor: const Color(0xFFDC2626),
-      isActive: true,
+      isActive: false,
       validFrom: DateTime.now().subtract(const Duration(days: 1)),
       validUntil: DateTime.now().add(const Duration(days: 30)),
     ),
@@ -238,7 +283,7 @@ class StateService extends ChangeNotifier {
       description: 'Celebrate 18 Dec with 50% Golden Discount across all laundry services!',
       descriptionAr: 'احتفل باليوم الوطني 18 ديسمبر مع خصم ذهبي 50% على جميع خدمات الغسيل!',
       bannerColor: const Color(0xFF8A1538),
-      isActive: true,
+      isActive: false,
       validFrom: DateTime.now().subtract(const Duration(days: 10)),
       validUntil: DateTime.now().add(const Duration(days: 20)),
     ),
@@ -255,7 +300,7 @@ class StateService extends ChangeNotifier {
       description: 'Celebrate 2 Dec Union Day with 40% OFF all premium wash packages!',
       descriptionAr: 'احتفل باليوم الوطني 2 ديسمبر مع خصم 40% على جميع باقات الغسيل الفاخرة!',
       bannerColor: const Color(0xFF00732F),
-      isActive: true,
+      isActive: false,
       validFrom: DateTime.now().subtract(const Duration(days: 5)),
       validUntil: DateTime.now().add(const Duration(days: 15)),
     ),
@@ -272,7 +317,7 @@ class StateService extends ChangeNotifier {
       description: 'Celebrate 23 Sep Kingdom Pride with 35% OFF all garment & textile care!',
       descriptionAr: 'احتفل باليوم الوطني 23 سبتمبر مع خصم 35% على العناية بجميع الملابس والأقمشة!',
       bannerColor: const Color(0xFF165B33),
-      isActive: true,
+      isActive: false,
       validFrom: DateTime.now().subtract(const Duration(days: 5)),
       validUntil: DateTime.now().add(const Duration(days: 15)),
     ),
@@ -289,7 +334,7 @@ class StateService extends ChangeNotifier {
       description: '20% OFF Wash & Fold by KG and Light Linens throughout summer months.',
       descriptionAr: 'خصم 20% على الغسيل والطي بالكيلو والمفارش الخفيفة طوال أشهر الصيف.',
       bannerColor: const Color(0xFFD97706),
-      isActive: true,
+      isActive: false,
       validFrom: DateTime.now().subtract(const Duration(days: 20)),
       validUntil: DateTime.now().add(const Duration(days: 40)),
     ),
@@ -306,7 +351,7 @@ class StateService extends ChangeNotifier {
       description: '20% OFF School Uniforms, Sports Kits & Backpacks sanitization & wash.',
       descriptionAr: 'خصم 20% على الزي المدرسي، الأطقم الرياضية وتعقيم وغسيل الحقائب المدرسية.',
       bannerColor: const Color(0xFF2563EB),
-      isActive: true,
+      isActive: false,
       validFrom: DateTime.now().subtract(const Duration(days: 10)),
       validUntil: DateTime.now().add(const Duration(days: 30)),
     ),
@@ -323,7 +368,7 @@ class StateService extends ChangeNotifier {
       description: 'Super 40% OFF Flash Discount for Express 24-hr Doorstep Laundry.',
       descriptionAr: 'خصم فلاش ضخم 40% على خدمات الغسيل السريعة خلال 24 ساعة حتى باب المنزل.',
       bannerColor: const Color(0xFFBE185D),
-      isActive: true,
+      isActive: false,
       validFrom: DateTime.now().subtract(const Duration(days: 1)),
       validUntil: DateTime.now().add(const Duration(days: 3)),
     ),
@@ -429,8 +474,8 @@ class StateService extends ChangeNotifier {
       ctaLink: 'express',
       primaryColor: const Color(0xFF800020),
       secondaryColor: const Color(0xFFB91C1C),
-      isActive: true,
-      isBroadcastPushed: true,
+      isActive: false,
+      isBroadcastPushed: false,
       createdAt: DateTime.now().subtract(const Duration(days: 2)),
       validUntil: DateTime.now().add(const Duration(days: 20)),
     ),
@@ -450,8 +495,8 @@ class StateService extends ChangeNotifier {
       ctaLink: 'catalog',
       primaryColor: const Color(0xFF047857),
       secondaryColor: const Color(0xFF0D9488),
-      isActive: true,
-      isBroadcastPushed: true,
+      isActive: false,
+      isBroadcastPushed: false,
       createdAt: DateTime.now().subtract(const Duration(days: 1)),
       validUntil: DateTime.now().add(const Duration(days: 15)),
     ),
@@ -471,8 +516,8 @@ class StateService extends ChangeNotifier {
       ctaLink: 'catalog',
       primaryColor: const Color(0xFF1E3A8A),
       secondaryColor: const Color(0xFF2563EB),
-      isActive: true,
-      isBroadcastPushed: true,
+      isActive: false,
+      isBroadcastPushed: false,
       createdAt: DateTime.now().subtract(const Duration(days: 3)),
       validUntil: DateTime.now().add(const Duration(days: 25)),
     ),
@@ -492,7 +537,7 @@ class StateService extends ChangeNotifier {
       ctaLink: 'catalog',
       primaryColor: const Color(0xFF1D4ED8),
       secondaryColor: const Color(0xFF0284C7),
-      isActive: true,
+      isActive: false,
       isBroadcastPushed: false,
       createdAt: DateTime.now().subtract(const Duration(days: 4)),
       validUntil: DateTime.now().add(const Duration(days: 18)),
@@ -513,8 +558,8 @@ class StateService extends ChangeNotifier {
       ctaLink: 'catalog',
       primaryColor: const Color(0xFF0F5132),
       secondaryColor: const Color(0xFF15803D),
-      isActive: true,
-      isBroadcastPushed: true,
+      isActive: false,
+      isBroadcastPushed: false,
       createdAt: DateTime.now().subtract(const Duration(days: 2)),
       validUntil: DateTime.now().add(const Duration(days: 30)),
     ),
@@ -534,8 +579,8 @@ class StateService extends ChangeNotifier {
       ctaLink: 'catalog',
       primaryColor: const Color(0xFF7C3AED),
       secondaryColor: const Color(0xFF9333EA),
-      isActive: true,
-      isBroadcastPushed: true,
+      isActive: false,
+      isBroadcastPushed: false,
       createdAt: DateTime.now().subtract(const Duration(days: 5)),
       validUntil: DateTime.now().add(const Duration(days: 45)),
     ),
@@ -596,7 +641,7 @@ class StateService extends ChangeNotifier {
   final List<AppPopupOffer> _popupOffers = [
     AppPopupOffer(
       id: 'popup_grand_welcome',
-      isActive: true,
+      isActive: false,
       title: 'Grand VIP Laundry & Dry Clean: 35% OFF',
       titleAr: 'عرض الترحيب الملكي: خصم 35% على كافة خدمات الغسيل والكوي',
       description: 'Experience ultra-gentle steam pressing, hypoallergenic wash, and custom cedar hangers delivered directly to your door.',
@@ -696,16 +741,158 @@ class StateService extends ChangeNotifier {
   double get customerWalletBalance => _customerWalletBalance;
   int get customerLoyaltyPoints => _customerLoyaltyPoints;
 
-  void topUpCustomerWallet(double amount) {
+  final List<WalletTransaction> _walletTransactions = [
+    WalletTransaction(
+      id: 'tx_01',
+      title: 'Digital Wallet Welcome Credit',
+      amount: 150.0,
+      isCredit: true,
+      timestamp: DateTime.now().subtract(const Duration(days: 4)),
+      reference: 'PROMO-WELCOME',
+      type: 'bonus',
+    ),
+    WalletTransaction(
+      id: 'tx_02',
+      title: 'Order Payment #UNW-1002',
+      amount: 45.0,
+      isCredit: false,
+      timestamp: DateTime.now().subtract(const Duration(days: 2)),
+      reference: 'ORDER-1002',
+      type: 'order_payment',
+    ),
+    WalletTransaction(
+      id: 'tx_03',
+      title: 'Instant Card Top-Up (+5% VIP Bonus)',
+      amount: 145.0,
+      isCredit: true,
+      timestamp: DateTime.now().subtract(const Duration(hours: 12)),
+      reference: 'VISA-9921',
+      type: 'top_up',
+    ),
+  ];
+  List<WalletTransaction> get walletTransactions => List.unmodifiable(_walletTransactions);
+
+  // VIP Premium Membership System
+  bool _isCustomerPremium = false;
+  String _customerPremiumTier = 'Standard Member';
+  DateTime? _premiumExpiryDate;
+
+  // Auto-Reload Wallet Settings
+  bool _isAutoReloadEnabled = false;
+  double _autoReloadThreshold = 30.0;
+  double _autoReloadAmount = 100.0;
+
+  bool get isCustomerPremium => _isCustomerPremium;
+  String get customerPremiumTier => _customerPremiumTier;
+  DateTime? get premiumExpiryDate => _premiumExpiryDate;
+  bool get isAutoReloadEnabled => _isAutoReloadEnabled;
+  double get autoReloadThreshold => _autoReloadThreshold;
+  double get autoReloadAmount => _autoReloadAmount;
+
+  void toggleAutoReload(bool enabled, {double? threshold, double? amount}) {
+    _isAutoReloadEnabled = enabled;
+    if (threshold != null) _autoReloadThreshold = threshold;
+    if (amount != null) _autoReloadAmount = amount;
+    notifyListeners();
+  }
+
+  void upgradeToPremiumMembership({
+    required String tier,
+    required double price,
+    String paymentMethod = 'wallet',
+  }) {
+    if (paymentMethod == 'wallet') {
+      if (_customerWalletBalance < price) {
+        throw Exception('Insufficient wallet balance');
+      }
+      _customerWalletBalance -= price;
+      _walletTransactions.insert(
+        0,
+        WalletTransaction(
+          id: 'tx_vip_${DateTime.now().millisecondsSinceEpoch}',
+          title: '$tier Membership (30 Days)',
+          amount: price,
+          isCredit: false,
+          timestamp: DateTime.now(),
+          reference: 'VIP-SUB-${DateTime.now().millisecondsSinceEpoch % 10000}',
+          type: 'membership_payment',
+        ),
+      );
+    }
+    _isCustomerPremium = true;
+    _customerPremiumTier = tier;
+    _premiumExpiryDate = DateTime.now().add(const Duration(days: 30));
+
+    logAudit(
+      actionType: AuditActionType.orderStatusCorrected,
+      entity: 'VIP Membership Subscription',
+      entityId: _currentUser.id,
+      previousValue: 'Standard Member',
+      newValue: tier,
+      reason: 'Customer upgraded to $tier via Customer Portal',
+      countryCode: 'QAT',
+    );
+
+    _messages.add(ChatMessage(
+      id: 'msg-${DateTime.now().millisecondsSinceEpoch}',
+      sender: 'UniWash VIP Concierge',
+      text: '👑 Welcome to $tier! You now enjoy Free Delivery on all orders, 50% discount on Urgent Rush Fees, and priority laundry processing.',
+      timestamp: DateTime.now(),
+      isMe: false,
+    ));
+
+    notifyListeners();
+  }
+
+  void cancelPremiumMembership() {
+    _isCustomerPremium = false;
+    _customerPremiumTier = 'Standard Member';
+    _premiumExpiryDate = null;
+    notifyListeners();
+  }
+
+  void topUpCustomerWallet(
+    double amount, {
+    String reference = 'Card Top-Up',
+    double bonus = 0.0,
+    String paymentGateway = 'QCB Debit/Credit Gateway',
+  }) {
     if (amount > 0) {
-      _customerWalletBalance += amount;
+      final totalCredit = amount + bonus;
+      _customerWalletBalance += totalCredit;
+      _walletTransactions.insert(
+        0,
+        WalletTransaction(
+          id: 'tx_${DateTime.now().millisecondsSinceEpoch}',
+          title: bonus > 0
+              ? 'Top-Up (${formatCurrency(amount)} + ${formatCurrency(bonus)} Bonus) via $paymentGateway'
+              : 'Wallet Reload via $paymentGateway',
+          amount: totalCredit,
+          isCredit: true,
+          timestamp: DateTime.now(),
+          reference: reference,
+          type: bonus > 0 ? 'bonus' : 'top_up',
+        ),
+      );
       notifyListeners();
     }
   }
 
-  bool payWithCustomerWallet(double amount) {
+  bool payWithCustomerWallet(double amount, {String orderNumber = ''}) {
     if (_customerWalletBalance >= amount) {
       _customerWalletBalance -= amount;
+      _walletTransactions.insert(
+        0,
+        WalletTransaction(
+          id: 'tx_${DateTime.now().millisecondsSinceEpoch}',
+          title: orderNumber.isNotEmpty ? 'Order Payment #$orderNumber' : 'Laundry Service Payment',
+          amount: amount,
+          isCredit: false,
+          timestamp: DateTime.now(),
+          reference: orderNumber.isNotEmpty ? 'ORDER-$orderNumber' : 'PURCHASE',
+          type: 'order_payment',
+        ),
+      );
       notifyListeners();
       return true;
     }
@@ -1003,6 +1190,7 @@ class StateService extends ChangeNotifier {
       qidPassportNumber: '29363401928',
       assignedLaundryId: 'laundry-doha-01',
       assignedLaundryName: 'UniWash Pearl & Marina Branch',
+      affiliation: DriverAffiliation.companyFleet, // Corporate Fleet (Not for laundry)
       warningStatus: WarningLevel.none,
       completedTrips: 320, // Tier: 300+ orders (Diamond Badge, Blue Tag, 3 QAR/order)
       todayEarningsQar: 480.0,
@@ -1028,6 +1216,7 @@ class StateService extends ChangeNotifier {
       qidPassportNumber: '29163402847',
       assignedLaundryId: 'laundry-doha-01',
       assignedLaundryName: 'UniWash Pearl & Marina Branch',
+      affiliation: DriverAffiliation.companyFleet, // Corporate Fleet (Not for laundry)
       warningStatus: WarningLevel.none,
       completedTrips: 265, // Tier: 250+ orders (Golden Badge, Blue Tag, 2 QAR/order)
       todayEarningsQar: 390.0,
@@ -1052,6 +1241,7 @@ class StateService extends ChangeNotifier {
       qidPassportNumber: '29463409918',
       assignedLaundryId: 'laundry-doha-02',
       assignedLaundryName: 'Royal Al-Sadd Cleaners',
+      affiliation: DriverAffiliation.laundryDedicated, // Dedicated to Royal Al-Sadd Cleaners
       warningStatus: WarningLevel.none,
       completedTrips: 210, // Tier: 200+ orders (Blue Verified Tag, 4 Stars, 2 QAR/order)
       todayEarningsQar: 310.0,
@@ -1076,6 +1266,7 @@ class StateService extends ChangeNotifier {
       qidPassportNumber: '28963401123',
       assignedLaundryId: 'laundry-doha-02',
       assignedLaundryName: 'Royal Al-Sadd Cleaners',
+      affiliation: DriverAffiliation.laundryDedicated, // Dedicated to Royal Al-Sadd Cleaners
       warningStatus: WarningLevel.none,
       completedTrips: 165, // Tier: 150+ orders (3 Stars, 1.50 QAR/order)
       todayEarningsQar: 245.0,
@@ -1100,6 +1291,7 @@ class StateService extends ChangeNotifier {
       qidPassportNumber: '29563408821',
       assignedLaundryId: 'laundry-doha-01',
       assignedLaundryName: 'UniWash Pearl & Marina Branch',
+      affiliation: DriverAffiliation.companyFleet, // Corporate Fleet (Not for laundry)
       warningStatus: WarningLevel.none,
       completedTrips: 110, // Tier: 100+ orders (2 Stars, 1.50 QAR/order)
       todayEarningsQar: 180.0,
@@ -1124,6 +1316,7 @@ class StateService extends ChangeNotifier {
       qidPassportNumber: '29863401290',
       assignedLaundryId: 'laundry-doha-02',
       assignedLaundryName: 'Royal Al-Sadd Cleaners',
+      affiliation: DriverAffiliation.laundryDedicated, // Dedicated to partner laundry
       warningStatus: WarningLevel.lightYellow,
       completedTrips: 60, // Tier: 50+ orders (1 Star, 1.00 QAR/order)
       todayEarningsQar: 95.0,
@@ -1140,6 +1333,20 @@ class StateService extends ChangeNotifier {
     ),
   ];
   List<DriverModel> get drivers => List.unmodifiable(_drivers);
+
+  void addDriver(DriverModel driver) {
+    _drivers.add(driver);
+    logAudit(
+      actionType: AuditActionType.driverCreated,
+      entity: 'Driver Fleet',
+      entityId: '${driver.userId} (${driver.fullName})',
+      previousValue: 'None',
+      newValue: '${driver.affiliation.shortBadge} assigned to ${driver.assignedLaundryName}',
+      reason: 'Driver onboarded by operations administration',
+      countryCode: 'QAT',
+    );
+    notifyListeners();
+  }
 
   void updateDriverPassword(String driverId, String newPassword) {
     final idx = _drivers.indexWhere((d) => d.id == driverId);
@@ -1386,13 +1593,13 @@ class StateService extends ChangeNotifier {
         apartmentRoom: 'Villa 3',
         city: 'Doha',
       ),
-      status: OrderStatus.placed,
+      status: OrderStatus.driverAssigned,
       paymentMethod: 'cash',
       paymentStatus: 'pending',
       createdAt: now.subtract(const Duration(minutes: 25)),
-      assignedDriverId: '',
-      assignedDriverName: 'Unassigned',
-      assignedDriverPhone: '',
+      assignedDriverId: 'drv-01',
+      assignedDriverName: 'Tariq Al-Mansoor',
+      assignedDriverPhone: '+974 5512 8900',
       laundryName: 'UniWash Pearl & Marina Branch',
       isAcceptedByLaundry: false,
       isDriverRideStarted: false,
@@ -1559,8 +1766,28 @@ class StateService extends ChangeNotifier {
   LaundryOrder placeOrder({
     required String paymentMethod,
     String specialInstructions = '',
+    bool isUrgent = false,
+    double urgentFee = 25.0,
+    DateTime? scheduledPickupDate,
+    String? scheduledPickupSlot,
+    DateTime? scheduledDeliveryDate,
+    String? scheduledDeliverySlot,
+    bool freeDelivery = false,
   }) {
     final orderNumber = 10840 + _orders.length + 1;
+    // Premium VIP benefits: Free delivery & 50% discount on urgent express rush fee
+    final effectiveDeliveryFee = (_isCustomerPremium || freeDelivery) ? 0.0 : 15.0;
+    final effectiveUrgentFee = _isCustomerPremium ? (urgentFee * 0.5) : urgentFee;
+
+    final tags = <String>[];
+    if (isUrgent) {
+      tags.add('🚨 URGENT RUSH');
+      tags.add('⚡ 4-Hour Express');
+    }
+    if (_isCustomerPremium) {
+      tags.add('👑 VIP Member');
+    }
+
     final newOrder = LaundryOrder(
       id: 'ord-${DateTime.now().millisecondsSinceEpoch}',
       orderNumber: orderNumber,
@@ -1569,19 +1796,40 @@ class StateService extends ChangeNotifier {
       address: _selectedAddress,
       items: List.from(_cart),
       status: OrderStatus.placed,
+      deliveryFee: effectiveDeliveryFee,
       paymentMethod: paymentMethod,
       paymentStatus: paymentMethod == 'cash' ? 'pending' : 'paid',
       specialInstructions: specialInstructions,
       createdAt: DateTime.now(),
-      assignedDriverId: 'drv-01',
-      assignedDriverName: 'Tariq Al-Mansoor',
-      assignedDriverPhone: '+974 5512 8900',
+      assignedDriverId: '',
+      assignedDriverName: 'Unassigned',
+      assignedDriverPhone: '',
       laundryName: 'UniWash Pearl & Marina Branch',
       laundryId: 'laundry-doha-01',
+      isAcceptedByLaundry: false,
+      isUrgent: isUrgent,
+      urgentFee: effectiveUrgentFee,
+      scheduledPickupDate: scheduledPickupDate,
+      scheduledPickupSlot: scheduledPickupSlot,
+      scheduledDeliveryDate: scheduledDeliveryDate,
+      scheduledDeliverySlot: scheduledDeliverySlot,
+      tags: tags,
     );
 
     if (paymentMethod == 'wallet') {
       _customerWalletBalance = (_customerWalletBalance - newOrder.totalAmount).clamp(0.0, double.infinity);
+      _walletTransactions.insert(
+        0,
+        WalletTransaction(
+          id: 'tx_${DateTime.now().millisecondsSinceEpoch}',
+          title: 'Order Payment #$orderNumber',
+          amount: newOrder.totalAmount,
+          isCredit: false,
+          timestamp: DateTime.now(),
+          reference: 'ORDER-$orderNumber',
+          type: 'order_payment',
+        ),
+      );
     }
     // Award 1 loyalty point per 2 QAR spent
     final earnedPoints = (newOrder.totalAmount / 2).round();
@@ -1591,6 +1839,18 @@ class StateService extends ChangeNotifier {
 
     _orders.insert(0, newOrder);
     _cart.clear();
+
+    // High-priority Alert for Admin Dispatch, Driver Fleet & Customer Service
+    final urgentPrefix = isUrgent ? '🚨⚡ [URGENT 4-HOUR RUSH] ' : '';
+    final scheduleDetails = 'Pickup: ${scheduledPickupSlot ?? 'Immediate'}, Drop-off: ${scheduledDeliverySlot ?? 'Standard Next-Day'}';
+    _messages.add(ChatMessage(
+      id: 'msg-${DateTime.now().millisecondsSinceEpoch}',
+      sender: isUrgent ? '⚡ Express Emergency Dispatch' : 'Admin Operations Control',
+      text: '$urgentPrefix New Order #$orderNumber placed by ${_currentUser.fullName}! ($scheduleDetails). Sent directly to Admin & Fleet with ${isUrgent ? 'TOP PRIORITY' : 'standard routing'}.',
+      timestamp: DateTime.now(),
+      isMe: false,
+    ));
+
     notifyListeners();
     return newOrder;
   }
@@ -1617,14 +1877,13 @@ class StateService extends ChangeNotifier {
     }
   }
 
-  // Laundry: Assign Driver (Shifts to Driver's Active Missions Console)
+  // Admin: Assign Driver (Directly dispatches mission to Driver's Active Missions Console)
   void assignDriverToOrder(String orderId, DriverModel driver) {
     final idx = _orders.indexWhere((o) => o.id == orderId);
     if (idx >= 0) {
       _orders[idx].assignedDriverId = driver.id;
       _orders[idx].assignedDriverName = driver.fullName;
       _orders[idx].assignedDriverPhone = driver.phone;
-      _orders[idx].isAcceptedByLaundry = true;
       if (_orders[idx].status == OrderStatus.placed) {
         _orders[idx].status = OrderStatus.driverAssigned;
       }
@@ -1633,8 +1892,8 @@ class StateService extends ChangeNotifier {
       // Broadcast alert message to driver
       _messages.add(ChatMessage(
         id: 'msg-${DateTime.now().millisecondsSinceEpoch}',
-        sender: 'Dispatch Center',
-        text: '📦 New Order Mission #${_orders[idx].orderNumber} assigned to you (${driver.fullName}) by Laundry. Check your active route!',
+        sender: 'Regional Admin Dispatch',
+        text: '📦 New Order Mission #${_orders[idx].orderNumber} assigned to you (${driver.fullName}) by Regional Admin. Check your active route!',
         timestamp: DateTime.now(),
         isMe: false,
       ));
@@ -1716,6 +1975,280 @@ class StateService extends ChangeNotifier {
     }
   }
 
+  // Customer Service / Admin: Compensate Customer Wallet for any complaint/issue
+  void compensateCustomerWallet(double amount, {required int orderNumber, required String reason}) {
+    if (amount > 0) {
+      _customerWalletBalance += amount;
+      _walletTransactions.insert(
+        0,
+        WalletTransaction(
+          id: 'tx_comp_${DateTime.now().millisecondsSinceEpoch}',
+          title: 'Support Courtesy Credit (Order #$orderNumber)',
+          amount: amount,
+          isCredit: true,
+          timestamp: DateTime.now(),
+          reference: 'CS-COMP-$orderNumber',
+          type: 'compensation',
+        ),
+      );
+      logAudit(
+        actionType: AuditActionType.problemResolved,
+        entity: 'Customer Digital Wallet',
+        entityId: 'Order #$orderNumber',
+        previousValue: 'Uncompensated',
+        newValue: '+$amount QAR Courtesy Credit ($reason)',
+        reason: 'Customer Support courtesy resolution for Order #$orderNumber',
+        countryCode: 'QAT',
+      );
+      _messages.add(ChatMessage(
+        id: 'msg-${DateTime.now().millisecondsSinceEpoch}',
+        sender: 'Customer Support Operations',
+        text: '🎁 Courtesy refund credit of ${formatCurrency(amount)} was credited to your digital wallet for Order #$orderNumber ($reason).',
+        timestamp: DateTime.now(),
+        isMe: false,
+      ));
+      notifyListeners();
+    }
+  }
+
+  // Customer Service: Upgrade Order to VIP Express Rush
+  void upgradeOrderToExpress(String orderId) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      if (!_orders[idx].tags.contains('⚡ VIP Express')) {
+        _orders[idx].tags.add('⚡ VIP Express');
+      }
+      _orders[idx].specialInstructions = [
+        '⚡ VIP EXPRESS RUSH TURNAROUND',
+        if (_orders[idx].specialInstructions.isNotEmpty) _orders[idx].specialInstructions,
+      ].join(' | ');
+      logAudit(
+        actionType: AuditActionType.orderStatusCorrected,
+        entity: 'Order Priority Level',
+        entityId: 'Order #${_orders[idx].orderNumber}',
+        previousValue: 'Standard Processing',
+        newValue: '⚡ VIP Express Rush',
+        reason: 'Customer requested rush expedited turnaround via Support',
+        countryCode: 'QAT',
+      );
+      _messages.add(ChatMessage(
+        id: 'msg-${DateTime.now().millisecondsSinceEpoch}',
+        sender: 'Customer Support Dispatch',
+        text: '⚡ Order #${_orders[idx].orderNumber} upgraded to VIP Express Priority! Laundry & courier alerted for priority line.',
+        timestamp: DateTime.now(),
+        isMe: false,
+      ));
+      notifyListeners();
+    }
+  }
+
+  // Customer Service: Waive Delivery Fee
+  void waiveDeliveryFee(String orderId) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      if (!_orders[idx].tags.contains('Free Delivery Waived')) {
+        _orders[idx].tags.add('Free Delivery Waived');
+      }
+      compensateCustomerWallet(15.0, orderNumber: _orders[idx].orderNumber, reason: 'Doorstep Delivery Fee Waived');
+    }
+  }
+
+  // Customer Service: Update Order Delivery Address
+  void updateOrderAddress(String orderId, CustomerAddress newAddress) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      final oldAddr = _orders[idx].address.formatted;
+      _orders[idx].address = newAddress;
+      logAudit(
+        actionType: AuditActionType.orderStatusCorrected,
+        entity: 'Order Destination Address',
+        entityId: 'Order #${_orders[idx].orderNumber}',
+        previousValue: oldAddr,
+        newValue: newAddress.formatted,
+        reason: 'Customer updated delivery coordinates via Customer Support portal',
+        countryCode: 'QAT',
+      );
+      _messages.add(ChatMessage(
+        id: 'msg-${DateTime.now().millisecondsSinceEpoch}',
+        sender: 'Customer Support Dispatch',
+        text: '📍 REROUTE ALERT: Destination address for Order #${_orders[idx].orderNumber} was updated to: ${newAddress.formatted}',
+        timestamp: DateTime.now(),
+        isMe: false,
+      ));
+      notifyListeners();
+    }
+  }
+
+  // Customer Service: Trigger Doorbell Grace Timer (Customer unreachable)
+  void triggerDoorbellGraceTimer(String orderId) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      _orders[idx].specialInstructions = [
+        '🔔 Doorbell Grace Alert Triggered at ${DateFormat('HH:mm').format(DateTime.now())} (15m waiting window)',
+        if (_orders[idx].specialInstructions.isNotEmpty) _orders[idx].specialInstructions,
+      ].join(' | ');
+      _messages.add(ChatMessage(
+        id: 'msg-${DateTime.now().millisecondsSinceEpoch}',
+        sender: 'Customer Support Operations',
+        text: '🔔 Doorbell/Intercom Alert: Driver arrived at Order #${_orders[idx].orderNumber}. Waiting 15m grace window. Please confirm entry or authorize doorstep drop-off.',
+        timestamp: DateTime.now(),
+        isMe: false,
+      ));
+      notifyListeners();
+    }
+  }
+
+  // Customer Service / Admin: Ping Driver with High Priority Audible Audio Alert
+  void dispatchRadioPingToDriver(String driverId, {required String message, int? orderNumber}) {
+    final driver = _drivers.firstWhere((d) => d.id == driverId, orElse: () => _drivers.first);
+    logAudit(
+      actionType: AuditActionType.problemResolved,
+      entity: 'Driver Dispatch Radios',
+      entityId: driver.fullName,
+      previousValue: 'Standby Telemetry',
+      newValue: 'Audible Priority Ping: $message',
+      reason: 'Support Agent dispatched urgent audio ping to courier in-transit',
+      countryCode: 'QAT',
+    );
+    _messages.add(ChatMessage(
+      id: 'msg-${DateTime.now().millisecondsSinceEpoch}',
+      sender: 'Dispatcher Radio • Ping',
+      text: '📡 Urgent Radio Alert sent to Driver ${driver.fullName}: "$message"${orderNumber != null ? ' (Order #$orderNumber)' : ''}',
+      timestamp: DateTime.now(),
+      isMe: true,
+    ));
+    notifyListeners();
+  }
+
+  // Customer Service: Authorize Safe Contactless Doorstep Drop-off
+  void authorizeDoorstepDropoff(String orderId) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      if (!_orders[idx].tags.contains('Safe Doorstep Authorized')) {
+        _orders[idx].tags.add('Safe Doorstep Authorized');
+      }
+      _orders[idx].specialInstructions = [
+        '🚪 SAFE CONTACTLESS DOORSTEP DROP-OFF AUTHORIZED BY CS SUPERVISOR (Photo proof required)',
+        if (_orders[idx].specialInstructions.isNotEmpty) _orders[idx].specialInstructions,
+      ].join(' | ');
+      logAudit(
+        actionType: AuditActionType.orderStatusCorrected,
+        entity: 'Doorstep Drop-off Authorization',
+        entityId: 'Order #${_orders[idx].orderNumber}',
+        previousValue: 'Signature Required',
+        newValue: 'Contactless Doorstep Authorized',
+        reason: 'Customer requested contactless delivery via Customer Support',
+        countryCode: 'QAT',
+      );
+      _messages.add(ChatMessage(
+        id: 'msg-${DateTime.now().millisecondsSinceEpoch}',
+        sender: 'Customer Support Dispatch',
+        text: '🚪 Doorstep drop-off authorized for Order #${_orders[idx].orderNumber}. Driver instructed to take proof photo at door.',
+        timestamp: DateTime.now(),
+        isMe: false,
+      ));
+      notifyListeners();
+    }
+  }
+
+  // Customer Service: Emergency Replace QR Tag Payload
+  void replaceOrderQrPayload(String orderId, String newPayload, {required String reason}) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      final oldPayload = _orders[idx].qrCodePayload;
+      _orders[idx].qrCodePayload = newPayload;
+      if (!_orders[idx].tags.contains('Emergency QR Replaced')) {
+        _orders[idx].tags.add('Emergency QR Replaced');
+      }
+      logAudit(
+        actionType: AuditActionType.orderStatusCorrected,
+        entity: 'Garment QR Tag',
+        entityId: 'Order #${_orders[idx].orderNumber}',
+        previousValue: oldPayload,
+        newValue: newPayload,
+        reason: reason,
+        countryCode: 'QAT',
+      );
+      notifyListeners();
+    }
+  }
+
+  // Customer Service: Remove / Delete Custom QR Tag and restore default
+  void removeOrderQrPayload(String orderId, {required String reason}) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      _orders[idx].customQrTag = null;
+      _orders[idx].tags.removeWhere((t) => t.contains('QR'));
+      logAudit(
+        actionType: AuditActionType.orderStatusCorrected,
+        entity: 'Garment QR Tag',
+        entityId: 'Order #${_orders[idx].orderNumber}',
+        previousValue: 'Custom Tag Removed',
+        newValue: 'Reset to System Default QR Payload',
+        reason: reason,
+        countryCode: 'QAT',
+      );
+      notifyListeners();
+    }
+  }
+
+  // Customer Service: Request Proof from Courier (Photo, Video, Loading, Delivery)
+  void requestProofFromDriver(String orderId, {required String proofType, required String notes}) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      final ord = _orders[idx];
+      _messages.add(ChatMessage(
+        id: 'msg-${DateTime.now().millisecondsSinceEpoch}',
+        sender: 'CS Dispatch Proof Request',
+        text: '📸 PROOF MANDATORY REQUEST for Order #${ord.orderNumber}: Driver ${ord.assignedDriverName}, upload $proofType. Notes: $notes',
+        timestamp: DateTime.now(),
+        isMe: true,
+      ));
+      logAudit(
+        actionType: AuditActionType.orderStatusCorrected,
+        entity: 'Courier Proof Request',
+        entityId: 'Order #${ord.orderNumber}',
+        previousValue: 'Unrequested',
+        newValue: 'Requested $proofType from ${ord.assignedDriverName}',
+        reason: notes,
+        countryCode: 'QAT',
+      );
+      notifyListeners();
+    }
+  }
+
+  // Customer Service: Record Order Delay Root Cause & Courier Explanation
+  void recordDelayRootCause(String orderId, {required String reason, required String driverExplanation}) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      final ord = _orders[idx];
+      if (!ord.tags.contains('⚠️ Delayed Investigated')) {
+        ord.tags.add('⚠️ Delayed Investigated');
+      }
+      ord.specialInstructions = [
+        '⚠️ DELAY LOG: $reason | Courier Note: $driverExplanation (${DateFormat('HH:mm').format(DateTime.now())})',
+        if (ord.specialInstructions.isNotEmpty) ord.specialInstructions,
+      ].join(' | ');
+      logAudit(
+        actionType: AuditActionType.orderStatusCorrected,
+        entity: 'Order SLA Turnaround Delay',
+        entityId: 'Order #${ord.orderNumber}',
+        previousValue: 'Unexplained Delay',
+        newValue: 'Documented Root Cause: $reason',
+        reason: driverExplanation,
+        countryCode: 'QAT',
+      );
+      _messages.add(ChatMessage(
+        id: 'msg-${DateTime.now().millisecondsSinceEpoch}',
+        sender: 'Operations SLA Investigation',
+        text: '⚠️ Delay verified for Order #${ord.orderNumber}. Cause: $reason. Driver explanation: "$driverExplanation"',
+        timestamp: DateTime.now(),
+        isMe: false,
+      ));
+      notifyListeners();
+    }
+  }
+
   // Regional Admin: Escalation Warning System
   void setLaundryWarning(String laundryId, WarningLevel level) {
     final idx = _laundries.indexWhere((l) => l.id == laundryId);
@@ -1793,5 +2326,1772 @@ class StateService extends ChangeNotifier {
     );
     notifyListeners();
   }
+
+  // ==========================================
+  // Driver Duty & Workflow Management
+  // ==========================================
+  DriverModel get currentDriver {
+    return _drivers.firstWhere(
+      (d) => d.id == 'drv-01',
+      orElse: () => _drivers.first,
+    );
+  }
+
+  DriverDutySession? _currentDutySession;
+  DriverDutySession? get currentDutySession => _currentDutySession;
+  bool get isDriverOnDuty => _currentDutySession != null && _currentDutySession!.isActive;
+
+  void startDriverDuty(DriverDutySession session) {
+    _currentDutySession = session;
+    notifyListeners();
+  }
+
+  void endDriverDuty() {
+    if (_currentDutySession != null) {
+      _currentDutySession!.isActive = false;
+      _currentDutySession!.endedAt = DateTime.now();
+    }
+    notifyListeners();
+  }
+
+  // 1. Order Collection Phase
+  void startOrderCollection(String orderId) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      _orders[idx].collectionStartedAt ??= DateTime.now();
+      _orders[idx].workflowStep = DriverWorkflowStep.collectionStarted;
+      _orders[idx].isDriverRideStarted = true;
+      _orders[idx].driverRideStartedAt ??= DateTime.now();
+      notifyListeners();
+    }
+  }
+
+  void verifyOrderCollectionQr(String orderId) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      _orders[idx].collectionQrScanned = true;
+      _orders[idx].collectionQrScannedAt = DateTime.now();
+      _orders[idx].workflowStep = DriverWorkflowStep.collectionQrScanned;
+      notifyListeners();
+    }
+  }
+
+  void uploadOrderCollectionProof(String orderId, String photoName) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      _orders[idx].collectionProofPhoto = photoName;
+      _orders[idx].collectionProofUploadedAt = DateTime.now();
+      _orders[idx].workflowStep = DriverWorkflowStep.collectionProofUploaded;
+      notifyListeners();
+    }
+  }
+
+  void completeOrderCollection(String orderId) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      _orders[idx].collectionCompletedAt = DateTime.now();
+      _orders[idx].workflowStep = DriverWorkflowStep.collectionCompleted;
+      _orders[idx].status = OrderStatus.pickedUp;
+      notifyListeners();
+    }
+  }
+
+  // 2. Order Arrival at Laundry Phase
+  void markOrderLaundryQrScanned(String orderId) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      _orders[idx].arrivedAtLaundryAt ??= DateTime.now();
+      _orders[idx].laundryQrScanned = true;
+      _orders[idx].laundryQrScannedAt = DateTime.now();
+      _orders[idx].workflowStep = DriverWorkflowStep.laundryQrScanCompleted;
+      notifyListeners();
+    }
+  }
+
+  void dispatchOrdersToLaundry({
+    required List<String> orderIds,
+    required String batchPhotoName,
+  }) {
+    final now = DateTime.now();
+    for (final id in orderIds) {
+      final idx = _orders.indexWhere((o) => o.id == id);
+      if (idx >= 0) {
+        _orders[idx].arrivedAtLaundryAt ??= now;
+        _orders[idx].laundryQrScanned = true;
+        _orders[idx].laundryQrScannedAt ??= now;
+        _orders[idx].laundryProofPhoto = batchPhotoName;
+        _orders[idx].dispatchedToLaundryAt = now;
+        _orders[idx].workflowStep = DriverWorkflowStep.dispatchedToLaundry;
+        _orders[idx].status = OrderStatus.inLaundry;
+      }
+    }
+    notifyListeners();
+  }
+
+  // 3. Start Order Delivery (Loading into Van)
+  void startDeliveryLoading(List<String> orderIds) {
+    final now = DateTime.now();
+    for (final id in orderIds) {
+      final idx = _orders.indexWhere((o) => o.id == id);
+      if (idx >= 0) {
+        _orders[idx].deliveryLoadingStartedAt ??= now;
+        _orders[idx].workflowStep = DriverWorkflowStep.deliveryStarted;
+      }
+    }
+    notifyListeners();
+  }
+
+  void markOrderLoadedForDelivery(String orderId) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      _orders[idx].deliveryLoadingQrScanned = true;
+      _orders[idx].deliveryLoadedInVan = true;
+      _orders[idx].workflowStep = DriverWorkflowStep.loadedInVan;
+      notifyListeners();
+    }
+  }
+
+  void completeVanLoadingAndDispatch({
+    required List<String> orderIds,
+    required String bagHangerPhoto,
+    required String platePhoto,
+    required String laundryPhoto,
+  }) {
+    for (final id in orderIds) {
+      final idx = _orders.indexWhere((o) => o.id == id);
+      if (idx >= 0) {
+        _orders[idx].deliveryLoadingBagHangerPhoto = bagHangerPhoto;
+        _orders[idx].deliveryLoadingPlatePhoto = platePhoto;
+        _orders[idx].deliveryLoadingLaundryPhoto = laundryPhoto;
+        _orders[idx].status = OrderStatus.outForDelivery;
+        _orders[idx].workflowStep = DriverWorkflowStep.deliveryStarted;
+        _orders[idx].isDriverRideStarted = true;
+        _orders[idx].driverRideStartedAt ??= DateTime.now();
+      }
+    }
+    notifyListeners();
+  }
+
+  // 4. Individual Order Delivery
+  void startIndividualOrderDelivery(String orderId) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      _orders[idx].deliveryStartedAt = DateTime.now();
+      _orders[idx].status = OrderStatus.outForDelivery;
+      _orders[idx].workflowStep = DriverWorkflowStep.deliveryStartedForOrder;
+      _orders[idx].isDriverRideStarted = true;
+      notifyListeners();
+    }
+  }
+
+  void verifyIndividualOrderDeliveryQr(String orderId) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      _orders[idx].deliveryQrScanned = true;
+      _orders[idx].deliveryQrScannedAt = DateTime.now();
+      notifyListeners();
+    }
+  }
+
+  void completeIndividualOrderDelivery({
+    required String orderId,
+    required String deliveryProofPhoto,
+    required String deliveryLocation,
+    String? deliveryLocationNote,
+  }) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      final order = _orders[idx];
+      order.deliveryProofPhoto = deliveryProofPhoto;
+      order.deliveryProofUploadedAt = DateTime.now();
+      order.deliveryLocation = deliveryLocation;
+      order.deliveryLocationNote = deliveryLocationNote;
+      order.deliveredAt = DateTime.now();
+      order.status = OrderStatus.delivered;
+      order.workflowStep = DriverWorkflowStep.delivered;
+
+      // Credit bonus to driver
+      final driver = currentDriver;
+      final bonus = driver.bonusRatePerOrder;
+      order.earnedBonus = bonus;
+      driver.completedTrips += 1;
+      driver.todayEarningsQar += bonus;
+
+      notifyListeners();
+    }
+  }
+
+  // 5. Cancel Order with Proof
+  void cancelOrderWithProof({
+    required String orderId,
+    required String reasonCategory,
+    required String reason,
+    String? customDescription,
+    required String locationPhoto,
+    required String callLogPhoto,
+    List<String> additionalPhotos = const [],
+  }) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      final driver = currentDriver;
+      final record = OrderCancellationRecord(
+        orderId: orderId,
+        driverId: driver.userId,
+        driverName: driver.fullName,
+        reasonCategory: reasonCategory,
+        reason: reason,
+        customDescription: customDescription,
+        locationPhoto: locationPhoto,
+        callLogPhoto: callLogPhoto,
+        additionalPhotos: additionalPhotos,
+        cancelledAt: DateTime.now(),
+      );
+
+      _orders[idx].status = OrderStatus.cancelled;
+      _orders[idx].workflowStep = DriverWorkflowStep.cancelled;
+      _orders[idx].cancellationRecord = record;
+
+      _messages.add(ChatMessage(
+        id: 'msg-${DateTime.now().millisecondsSinceEpoch}',
+        sender: 'Driver Cancellation Alert',
+        text: '❌ Order #${_orders[idx].orderNumber} CANCELLED by ${driver.fullName}. Reason: $reason. Proof photos attached.',
+        timestamp: DateTime.now(),
+        isMe: false,
+      ));
+
+      notifyListeners();
+    }
+  }
+
+  // ==========================================
+  // COUNTRY & BRANCH ENTERPRISE MANAGEMENT
+  // ==========================================
+  final List<CountryModel> _countries = [
+    CountryModel(
+      code: 'QAT',
+      name: 'Qatar',
+      nameAr: 'دولة قطر',
+      flag: '🇶🇦',
+      currencyCode: 'QAR',
+      currencySymbol: 'QAR',
+      currencySymbolAr: 'ر.ق',
+      exchangeRateToQar: 1.0,
+      hqAddress: 'Level 24, Al Fardan Commercial Towers, West Bay, Doha, Qatar',
+      primaryContactPhone: '+974 4499 1000',
+      primaryContactEmail: 'operations.doha@uniwash.qa',
+      isActive: true,
+      createdAt: DateTime(2022, 1, 1),
+      branches: [
+        BranchModel(
+          id: 'branch-qat-01',
+          code: 'DOH-01',
+          name: 'Doha Central & Pearl Marina Hub',
+          nameAr: 'فرع الدوحة واللؤلؤة الرئيسي',
+          countryCode: 'QAT',
+          city: 'Doha',
+          address: 'Porto Arabia Tower 12, The Pearl-Qatar, Doha',
+          phone: '+974 4499 8811',
+          email: 'pearl.branch@uniwash.qa',
+          managerName: 'Nasser Al-Hajri',
+          isActive: true,
+          createdAt: DateTime(2022, 2, 1),
+          activeDriversCount: 16,
+          activeLaundriesCount: 4,
+          activeStaffCount: 8,
+        ),
+        BranchModel(
+          id: 'branch-qat-02',
+          code: 'DOH-02',
+          name: 'Al Sadd & Bin Mahmoud Station',
+          nameAr: 'فرع السد وبن محمود',
+          countryCode: 'QAT',
+          city: 'Doha',
+          address: 'Al Sadd St, Near Sports Club, Doha',
+          phone: '+974 4433 2211',
+          email: 'alsadd.branch@uniwash.qa',
+          managerName: 'Fahad Al-Tamimi',
+          isActive: true,
+          createdAt: DateTime(2022, 5, 10),
+          activeDriversCount: 12,
+          activeLaundriesCount: 3,
+          activeStaffCount: 6,
+        ),
+        BranchModel(
+          id: 'branch-qat-03',
+          code: 'DOH-03',
+          name: 'West Bay Diplomatic Hub',
+          nameAr: 'فرع الخليج الغربي الدبلوماسي',
+          countryCode: 'QAT',
+          city: 'Doha',
+          address: 'Majlis Al Taawon St, Diplomatic Area, Doha',
+          phone: '+974 4411 9900',
+          email: 'westbay.hub@uniwash.qa',
+          managerName: 'Ibrahim Khouri',
+          isActive: true,
+          createdAt: DateTime(2022, 9, 15),
+          activeDriversCount: 8,
+          activeLaundriesCount: 2,
+          activeStaffCount: 4,
+        ),
+        BranchModel(
+          id: 'branch-qat-04',
+          code: 'LUS-01',
+          name: 'Lusail Marina Smart Hub',
+          nameAr: 'فرع لوسيل مارينا الذكي',
+          countryCode: 'QAT',
+          city: 'Lusail',
+          address: 'Marina Promenade Building B3, Lusail City',
+          phone: '+974 4455 7788',
+          email: 'lusail.ops@uniwash.qa',
+          managerName: 'Tariq Al-Kawari',
+          isActive: true,
+          createdAt: DateTime(2023, 1, 12),
+          activeDriversCount: 6,
+          activeLaundriesCount: 2,
+          activeStaffCount: 5,
+        ),
+      ],
+    ),
+    CountryModel(
+      code: 'UAE',
+      name: 'United Arab Emirates',
+      nameAr: 'الإمارات العربية المتحدة',
+      flag: '🇦🇪',
+      currencyCode: 'AED',
+      currencySymbol: 'AED',
+      currencySymbolAr: 'د.إ',
+      exchangeRateToQar: 1.01,
+      hqAddress: 'Level 18, Burj Daman Building, DIFC, Dubai, UAE',
+      primaryContactPhone: '+971 4 330 9900',
+      primaryContactEmail: 'dubai.hub@uniwash.ae',
+      isActive: true,
+      createdAt: DateTime(2022, 6, 1),
+      branches: [
+        BranchModel(
+          id: 'branch-uae-01',
+          code: 'DXB-01',
+          name: 'Dubai Marina & JBR Logistics Hub',
+          nameAr: 'فرع دبي مارينا وجميرا بيتش',
+          countryCode: 'UAE',
+          city: 'Dubai',
+          address: 'Marina Gate Tower 1, Dubai Marina',
+          phone: '+971 4 330 9911',
+          email: 'marina.dxb@uniwash.ae',
+          managerName: 'Farah El-Sayed',
+          isActive: true,
+          createdAt: DateTime(2022, 7, 1),
+          activeDriversCount: 45,
+          activeLaundriesCount: 15,
+          activeStaffCount: 18,
+        ),
+        BranchModel(
+          id: 'branch-uae-02',
+          code: 'DXB-02',
+          name: 'Downtown & Business Bay Center',
+          nameAr: 'فرع وسط المدينة والخليج التجاري',
+          countryCode: 'UAE',
+          city: 'Dubai',
+          address: 'Marasi Drive, Business Bay, Dubai',
+          phone: '+971 4 330 9922',
+          email: 'downtown.dxb@uniwash.ae',
+          managerName: 'Rashid Al-Falasi',
+          isActive: true,
+          createdAt: DateTime(2022, 10, 1),
+          activeDriversCount: 28,
+          activeLaundriesCount: 12,
+          activeStaffCount: 14,
+        ),
+        BranchModel(
+          id: 'branch-uae-03',
+          code: 'AUH-01',
+          name: 'Abu Dhabi Corniche & Al Reem',
+          nameAr: 'فرع كورنيش أبوظبي وجزيرة الريم',
+          countryCode: 'UAE',
+          city: 'Abu Dhabi',
+          address: 'Sky Tower, Al Reem Island, Abu Dhabi',
+          phone: '+971 2 440 8800',
+          email: 'abudhabi.hub@uniwash.ae',
+          managerName: 'Mariam Al-Zaabi',
+          isActive: true,
+          createdAt: DateTime(2023, 3, 1),
+          activeDriversCount: 22,
+          activeLaundriesCount: 8,
+          activeStaffCount: 10,
+        ),
+      ],
+    ),
+    CountryModel(
+      code: 'KSA',
+      name: 'Saudi Arabia',
+      nameAr: 'المملكة العربية السعودية',
+      flag: '🇸🇦',
+      currencyCode: 'SAR',
+      currencySymbol: 'SAR',
+      currencySymbolAr: 'ر.س',
+      exchangeRateToQar: 1.03,
+      hqAddress: 'King Fahd Road, Al-Olaya Business District, Riyadh, KSA',
+      primaryContactPhone: '+966 11 400 8800',
+      primaryContactEmail: 'riyadh.ops@uniwash.sa',
+      isActive: true,
+      createdAt: DateTime(2022, 8, 1),
+      branches: [
+        BranchModel(
+          id: 'branch-ksa-01',
+          code: 'RUH-01',
+          name: 'Riyadh Al-Olaya Central Station',
+          nameAr: 'فرع العليا الرياض المركزي',
+          countryCode: 'KSA',
+          city: 'Riyadh',
+          address: 'Olaya Towers, Olaya St, Riyadh',
+          phone: '+966 11 400 8811',
+          email: 'olaya.ruh@uniwash.sa',
+          managerName: 'Sultan Al-Ghamdi',
+          isActive: true,
+          createdAt: DateTime(2022, 9, 1),
+          activeDriversCount: 65,
+          activeLaundriesCount: 30,
+          activeStaffCount: 25,
+        ),
+        BranchModel(
+          id: 'branch-ksa-02',
+          code: 'JED-01',
+          name: 'Jeddah Al-Hamra Coastal Hub',
+          nameAr: 'فرع جدة الحمراء الساحلي',
+          countryCode: 'KSA',
+          city: 'Jeddah',
+          address: 'Palestine St, Al-Hamra District, Jeddah',
+          phone: '+966 12 600 4400',
+          email: 'jeddah.hub@uniwash.sa',
+          managerName: 'Abdulaziz Al-Shehri',
+          isActive: true,
+          createdAt: DateTime(2023, 2, 1),
+          activeDriversCount: 42,
+          activeLaundriesCount: 18,
+          activeStaffCount: 16,
+        ),
+      ],
+    ),
+    CountryModel(
+      code: 'KWT',
+      name: 'Kuwait',
+      nameAr: 'دولة الكويت',
+      flag: '🇰🇼',
+      currencyCode: 'KWD',
+      currencySymbol: 'KWD',
+      currencySymbolAr: 'د.ك',
+      exchangeRateToQar: 0.084,
+      hqAddress: 'Arraya Commercial Center, Al-Shuhada St, Kuwait City',
+      primaryContactPhone: '+965 2220 1100',
+      primaryContactEmail: 'kwt.hub@uniwash.com',
+      isActive: true,
+      createdAt: DateTime(2023, 3, 1),
+      branches: [
+        BranchModel(
+          id: 'branch-kwt-01',
+          code: 'KWT-01',
+          name: 'Kuwait City Arraya Hub',
+          nameAr: 'فرع مدينة الكويت الراية',
+          countryCode: 'KWT',
+          city: 'Kuwait City',
+          address: 'Al-Shuhada St, Arraya Tower, Kuwait City',
+          phone: '+965 2220 1111',
+          email: 'city.kwt@uniwash.com',
+          managerName: 'Yousef Al-Kandari',
+          isActive: true,
+          createdAt: DateTime(2023, 3, 10),
+          activeDriversCount: 28,
+          activeLaundriesCount: 12,
+          activeStaffCount: 9,
+        ),
+      ],
+    ),
+    CountryModel(
+      code: 'OMN',
+      name: 'Oman',
+      nameAr: 'سلطنة عمان',
+      flag: '🇴🇲',
+      currencyCode: 'OMR',
+      currencySymbol: 'OMR',
+      currencySymbolAr: 'ر.ع',
+      exchangeRateToQar: 0.106,
+      hqAddress: 'Muscat Grand Mall Complex, Dohat Al Adab St, Muscat, Oman',
+      primaryContactPhone: '+968 2440 2200',
+      primaryContactEmail: 'muscat.hub@uniwash.com',
+      isActive: true,
+      createdAt: DateTime(2023, 5, 1),
+      branches: [
+        BranchModel(
+          id: 'branch-omn-01',
+          code: 'MCT-01',
+          name: 'Muscat Grand Mall Center',
+          nameAr: 'فرع مسقط جراند مول',
+          countryCode: 'OMN',
+          city: 'Muscat',
+          address: 'Dohat Al Adab St, Al Khuwair, Muscat',
+          phone: '+968 2440 2211',
+          email: 'muscat.city@uniwash.com',
+          managerName: 'Haitham Al-Balushi',
+          isActive: true,
+          createdAt: DateTime(2023, 5, 15),
+          activeDriversCount: 20,
+          activeLaundriesCount: 9,
+          activeStaffCount: 7,
+        ),
+      ],
+    ),
+    CountryModel(
+      code: 'BHR',
+      name: 'Bahrain',
+      nameAr: 'مملكة البحرين',
+      flag: '🇧🇭',
+      currencyCode: 'BHD',
+      currencySymbol: 'BHD',
+      currencySymbolAr: 'د.ب',
+      exchangeRateToQar: 0.103,
+      hqAddress: 'Bahrain Financial Harbour, West Tower, Manama, Bahrain',
+      primaryContactPhone: '+973 1750 3300',
+      primaryContactEmail: 'bahrain.ops@uniwash.com',
+      isActive: true,
+      createdAt: DateTime(2023, 7, 1),
+      branches: [
+        BranchModel(
+          id: 'branch-bhr-01',
+          code: 'BAH-01',
+          name: 'Manama Financial Harbour Branch',
+          nameAr: 'فرع مرفأ البحرين المالي بالمنامة',
+          countryCode: 'BHR',
+          city: 'Manama',
+          address: 'West Tower, Financial Harbour, Manama',
+          phone: '+973 1750 3311',
+          email: 'manama.hub@uniwash.com',
+          managerName: 'Salman Al-Khalifa',
+          isActive: true,
+          createdAt: DateTime(2023, 7, 10),
+          activeDriversCount: 18,
+          activeLaundriesCount: 8,
+          activeStaffCount: 6,
+        ),
+      ],
+    ),
+    CountryModel(
+      code: 'GBR',
+      name: 'United Kingdom',
+      nameAr: 'المملكة المتحدة',
+      flag: '🇬🇧',
+      currencyCode: 'GBP',
+      currencySymbol: '£',
+      currencySymbolAr: 'ج.إ',
+      exchangeRateToQar: 0.21,
+      hqAddress: '45 Berkeley Square, Mayfair, London W1J 5AS, UK',
+      primaryContactPhone: '+44 20 7946 0192',
+      primaryContactEmail: 'london.hq@uniwash.com',
+      isActive: true,
+      createdAt: DateTime(2023, 9, 1),
+      branches: [
+        BranchModel(
+          id: 'branch-gbr-01',
+          code: 'LON-01',
+          name: 'London Mayfair & West End Hub',
+          nameAr: 'فرع لندن مايفير وويست إند',
+          countryCode: 'GBR',
+          city: 'London',
+          address: '45 Berkeley Square, Mayfair, London',
+          phone: '+44 20 7946 0199',
+          email: 'mayfair.lon@uniwash.com',
+          managerName: 'Edward Sterling',
+          isActive: true,
+          createdAt: DateTime(2023, 9, 15),
+          activeDriversCount: 50,
+          activeLaundriesCount: 24,
+          activeStaffCount: 20,
+        ),
+      ],
+    ),
+    CountryModel(
+      code: 'USA',
+      name: 'United States',
+      nameAr: 'الولايات المتحدة',
+      flag: '🇺🇸',
+      currencyCode: 'USD',
+      currencySymbol: '\$',
+      currencySymbolAr: '\$',
+      exchangeRateToQar: 0.27,
+      hqAddress: '1251 Avenue of the Americas, Manhattan, New York, NY 10020',
+      primaryContactPhone: '+1 212 555 0188',
+      primaryContactEmail: 'ny.ops@uniwash.com',
+      isActive: true,
+      createdAt: DateTime(2023, 11, 1),
+      branches: [
+        BranchModel(
+          id: 'branch-usa-01',
+          code: 'NYC-01',
+          name: 'Manhattan Midtown & Wall St Logistics Hub',
+          nameAr: 'فرع مانهاتن نيويورك المركزي',
+          countryCode: 'USA',
+          city: 'New York',
+          address: '1251 Avenue of the Americas, Manhattan, NY',
+          phone: '+1 212 555 0199',
+          email: 'manhattan.nyc@uniwash.com',
+          managerName: 'Marcus Vance',
+          isActive: true,
+          createdAt: DateTime(2023, 11, 15),
+          activeDriversCount: 110,
+          activeLaundriesCount: 55,
+          activeStaffCount: 42,
+        ),
+      ],
+    ),
+  ];
+
+  List<CountryModel> get countries => List.unmodifiable(_countries);
+
+  CountryModel? getCountryByCode(String code) {
+    try {
+      return _countries.firstWhere((c) => c.code.toUpperCase() == code.toUpperCase());
+    } catch (_) {
+      return null;
+    }
+  }
+
+  void addCountry(CountryModel newCountry) {
+    _countries.add(newCountry);
+    logAudit(
+      actionType: AuditActionType.countryConfigUpdated,
+      entity: 'Country',
+      entityId: newCountry.code,
+      previousValue: 'None',
+      newValue: 'Added ${newCountry.name} (${newCountry.code})',
+      reason: 'New geographic operational market initialized by Super Admin',
+      countryCode: newCountry.code,
+    );
+    notifyListeners();
+  }
+
+  void updateCountry(String code, {required String name, required String hqAddress, required String phone, required String email}) {
+    final idx = _countries.indexWhere((c) => c.code == code);
+    if (idx >= 0) {
+      final old = _countries[idx];
+      _countries[idx] = CountryModel(
+        code: old.code,
+        name: name,
+        nameAr: old.nameAr,
+        flag: old.flag,
+        currencyCode: old.currencyCode,
+        currencySymbol: old.currencySymbol,
+        currencySymbolAr: old.currencySymbolAr,
+        exchangeRateToQar: old.exchangeRateToQar,
+        hqAddress: hqAddress,
+        primaryContactPhone: phone,
+        primaryContactEmail: email,
+        isActive: old.isActive,
+        createdAt: old.createdAt,
+        branches: old.branches,
+      );
+      logAudit(
+        actionType: AuditActionType.countryConfigUpdated,
+        entity: 'Country',
+        entityId: code,
+        previousValue: '${old.name} | ${old.primaryContactPhone}',
+        newValue: '$name | $phone',
+        reason: 'Country contact & regional HQ records updated',
+        countryCode: code,
+      );
+      notifyListeners();
+    }
+  }
+
+  void toggleCountryStatus(String code) {
+    final idx = _countries.indexWhere((c) => c.code == code);
+    if (idx >= 0) {
+      final oldStatus = _countries[idx].isActive;
+      _countries[idx].isActive = !oldStatus;
+      logAudit(
+        actionType: AuditActionType.countryConfigUpdated,
+        entity: 'Country',
+        entityId: code,
+        previousValue: oldStatus ? 'Active' : 'Inactive',
+        newValue: !oldStatus ? 'Active' : 'Inactive',
+        reason: 'Super Admin toggled country operational status',
+        countryCode: code,
+      );
+      notifyListeners();
+    }
+  }
+
+  // Branch CRUD
+  List<BranchModel> get allBranches {
+    final List<BranchModel> all = [];
+    for (final c in _countries) {
+      all.addAll(c.branches);
+    }
+    return all;
+  }
+
+  List<BranchModel> getBranchesForCountry(String code) {
+    final country = getCountryByCode(code);
+    return country?.branches ?? [];
+  }
+
+  void addBranch(String countryCode, BranchModel branch) {
+    final country = getCountryByCode(countryCode);
+    if (country != null) {
+      country.branches.add(branch);
+      logAudit(
+        actionType: AuditActionType.branchCreated,
+        entity: 'Branch',
+        entityId: '${branch.code} (${branch.name})',
+        previousValue: 'None',
+        newValue: 'Created in ${country.name}',
+        reason: 'New branch facility established',
+        countryCode: countryCode,
+      );
+      notifyListeners();
+    }
+  }
+
+  void updateBranch(String branchId, {required String name, required String city, required String address, required String phone, required String email, required String managerName}) {
+    for (final country in _countries) {
+      final idx = country.branches.indexWhere((b) => b.id == branchId);
+      if (idx >= 0) {
+        final old = country.branches[idx];
+        country.branches[idx] = old.copyWith(
+          name: name,
+          city: city,
+          address: address,
+          phone: phone,
+          email: email,
+          managerName: managerName,
+        );
+        logAudit(
+          actionType: AuditActionType.branchCreated,
+          entity: 'Branch',
+          entityId: branchId,
+          previousValue: '${old.name} | ${old.managerName}',
+          newValue: '$name | $managerName',
+          reason: 'Branch details modified',
+          countryCode: country.code,
+        );
+        notifyListeners();
+        return;
+      }
+    }
+  }
+
+  void toggleBranchStatus(String branchId) {
+    for (final country in _countries) {
+      final idx = country.branches.indexWhere((b) => b.id == branchId);
+      if (idx >= 0) {
+        final old = country.branches[idx];
+        country.branches[idx].isActive = !old.isActive;
+        logAudit(
+          actionType: AuditActionType.branchCreated,
+          entity: 'Branch',
+          entityId: branchId,
+          previousValue: old.isActive ? 'Active' : 'Deactivated',
+          newValue: !old.isActive ? 'Active' : 'Deactivated',
+          reason: 'Branch operational status updated',
+          countryCode: country.code,
+        );
+        notifyListeners();
+        return;
+      }
+    }
+  }
+
+  // ==========================================
+  // ADMIN & ROLE-BASED ACCESS CONTROL
+  // ==========================================
+  final List<AdminUserModel> _admins = [
+    AdminUserModel(
+      id: 'adm-01',
+      fullName: 'Eng. Sheikh Faisal Al-Thani',
+      email: 'faisal.director@uniwash.qa',
+      phone: '+974 4499 1000',
+      countryCode: 'GLOBAL',
+      assignedBranchIds: [],
+      permissions: AppPermission.superAdminPermissions,
+      isSuperAdmin: true,
+      isActive: true,
+      createdAt: DateTime(2022, 1, 1),
+      lastLoginAt: DateTime.now().subtract(const Duration(minutes: 10)),
+    ),
+    AdminUserModel(
+      id: 'adm-02',
+      fullName: 'Rashid Al-Sulaiti',
+      email: 'rashid.ops@uniwash.qa',
+      phone: '+974 3300 4455',
+      countryCode: 'QAT',
+      assignedBranchIds: ['branch-qat-01', 'branch-qat-02', 'branch-qat-03', 'branch-qat-04'],
+      permissions: AppPermission.regionalAdminDefaults,
+      isSuperAdmin: false,
+      isActive: true,
+      createdAt: DateTime(2022, 3, 1),
+      lastLoginAt: DateTime.now().subtract(const Duration(hours: 1)),
+    ),
+    AdminUserModel(
+      id: 'adm-03',
+      fullName: 'Farah El-Sayed',
+      email: 'farah.ops@uniwash.ae',
+      phone: '+971 4 330 9901',
+      countryCode: 'UAE',
+      assignedBranchIds: ['branch-uae-01', 'branch-uae-02'],
+      permissions: AppPermission.regionalAdminDefaults,
+      isSuperAdmin: false,
+      isActive: true,
+      createdAt: DateTime(2022, 7, 1),
+      lastLoginAt: DateTime.now().subtract(const Duration(hours: 3)),
+    ),
+    AdminUserModel(
+      id: 'adm-04',
+      fullName: 'Sultan Al-Ghamdi',
+      email: 'sultan.md@uniwash.sa',
+      phone: '+966 11 400 8800',
+      countryCode: 'KSA',
+      assignedBranchIds: ['branch-ksa-01', 'branch-ksa-02'],
+      permissions: AppPermission.regionalAdminDefaults,
+      isSuperAdmin: false,
+      isActive: true,
+      createdAt: DateTime(2022, 9, 1),
+      lastLoginAt: DateTime.now().subtract(const Duration(hours: 5)),
+    ),
+    AdminUserModel(
+      id: 'adm-05',
+      fullName: 'Mona Al-Kuwari',
+      email: 'mona.ops@uniwash.qa',
+      phone: '+974 4499 1001',
+      countryCode: 'QAT',
+      assignedBranchIds: ['branch-qat-01', 'branch-qat-03'],
+      permissions: AppPermission.customerServiceDefaults,
+      isSuperAdmin: false,
+      isActive: true,
+      createdAt: DateTime(2023, 1, 15),
+      lastLoginAt: DateTime.now().subtract(const Duration(minutes: 45)),
+    ),
+  ];
+
+  List<AdminUserModel> get admins => List.unmodifiable(_admins);
+
+  void addAdmin(AdminUserModel admin) {
+    _admins.add(admin);
+    logAudit(
+      actionType: AuditActionType.adminCreated,
+      entity: 'Admin',
+      entityId: '${admin.id} (${admin.fullName})',
+      previousValue: 'None',
+      newValue: 'Assigned to ${admin.countryCode}',
+      reason: 'New Regional Admin onboarded with custom permission set',
+      countryCode: admin.countryCode,
+    );
+    notifyListeners();
+  }
+
+  void updateAdmin(String id, {required String fullName, required String email, required String phone, required String countryCode, required List<String> branches, required Set<AppPermission> permissions}) {
+    final idx = _admins.indexWhere((a) => a.id == id);
+    if (idx >= 0) {
+      final old = _admins[idx];
+      _admins[idx] = AdminUserModel(
+        id: old.id,
+        fullName: fullName,
+        email: email,
+        phone: phone,
+        countryCode: countryCode,
+        assignedBranchIds: branches,
+        permissions: permissions,
+        isSuperAdmin: old.isSuperAdmin,
+        isActive: old.isActive,
+        createdAt: old.createdAt,
+        lastLoginAt: old.lastLoginAt,
+      );
+      logAudit(
+        actionType: AuditActionType.adminEdited,
+        entity: 'Admin',
+        entityId: id,
+        previousValue: '${old.fullName} | ${old.countryCode} (${old.permissions.length} perms)',
+        newValue: '$fullName | $countryCode (${permissions.length} perms)',
+        reason: 'Super Admin updated admin assignments and permission scope',
+        countryCode: countryCode,
+      );
+      notifyListeners();
+    }
+  }
+
+  void toggleAdminStatus(String id) {
+    final idx = _admins.indexWhere((a) => a.id == id);
+    if (idx >= 0) {
+      final old = _admins[idx];
+      _admins[idx].isActive = !old.isActive;
+      logAudit(
+        actionType: AuditActionType.adminDeactivated,
+        entity: 'Admin',
+        entityId: id,
+        previousValue: old.isActive ? 'Active' : 'Deactivated',
+        newValue: !old.isActive ? 'Active' : 'Deactivated',
+        reason: 'Admin access toggled',
+        countryCode: old.countryCode,
+      );
+      notifyListeners();
+    }
+  }
+
+  // ==========================================
+  // TEAM MANAGEMENT (CUSTOMER SERVICE, DRIVERS, OFFICE STAFF)
+  // ==========================================
+  final List<TeamMemberModel> _teamMembers = [
+    TeamMemberModel(
+      id: 'tm-cs-01',
+      fullName: 'Sara Mansoor',
+      email: 'sara.disputes@uniwash.qa',
+      phone: '+974 4499 1003',
+      category: TeamCategory.customerService,
+      countryCode: 'QAT',
+      branchId: 'branch-qat-01',
+      branchName: 'Doha Central & Pearl Marina Hub',
+      jobTitle: 'Senior Customer Dispute & VIP Service Specialist',
+      joinedAt: DateTime(2022, 4, 1),
+      assignedOrdersCount: 142,
+      completedOrdersCount: 139,
+      rating: 4.95,
+    ),
+    TeamMemberModel(
+      id: 'tm-cs-02',
+      fullName: 'Noora Al-Attiyah',
+      email: 'noora.cs@uniwash.qa',
+      phone: '+974 4499 1004',
+      category: TeamCategory.customerService,
+      countryCode: 'QAT',
+      branchId: 'branch-qat-03',
+      branchName: 'West Bay Diplomatic Hub',
+      jobTitle: 'Customer Care & Order Resolution Agent',
+      joinedAt: DateTime(2023, 2, 10),
+      assignedOrdersCount: 98,
+      completedOrdersCount: 95,
+      rating: 4.88,
+    ),
+    TeamMemberModel(
+      id: 'tm-of-01',
+      fullName: 'Ahmed Tariq',
+      email: 'dispatch.doha@uniwash.qa',
+      phone: '+974 4499 1002',
+      category: TeamCategory.officeStaff,
+      countryCode: 'QAT',
+      branchId: 'branch-qat-01',
+      branchName: 'Doha Central & Pearl Marina Hub',
+      jobTitle: 'Logistics, Shift & Van Fleet Supervisor',
+      joinedAt: DateTime(2022, 3, 1),
+      assignedOrdersCount: 420,
+      completedOrdersCount: 412,
+      rating: 4.92,
+    ),
+    TeamMemberModel(
+      id: 'tm-of-02',
+      fullName: 'Kavita Patel',
+      email: 'kavita.qa@uniwash.qa',
+      phone: '+974 4499 1005',
+      category: TeamCategory.officeStaff,
+      countryCode: 'QAT',
+      branchId: 'branch-qat-02',
+      branchName: 'Al Sadd & Bin Mahmoud Station',
+      jobTitle: 'Garment Quality & Cleanliness Inspector',
+      joinedAt: DateTime(2022, 6, 1),
+      assignedOrdersCount: 310,
+      completedOrdersCount: 308,
+      rating: 4.96,
+    ),
+    TeamMemberModel(
+      id: 'tm-dr-01',
+      fullName: 'Tariq Al-Mansoor',
+      email: 'tariq.driver@uniwash.qa',
+      phone: '+974 5512 8900',
+      category: TeamCategory.driver,
+      driverAffiliation: DriverAffiliation.companyFleet,
+      countryCode: 'QAT',
+      branchId: 'branch-qat-01',
+      branchName: 'Doha Central & Pearl Marina Hub',
+      jobTitle: 'Lead Courier & Platinum Driver (Company Fleet)',
+      joinedAt: DateTime(2023, 2, 1),
+      assignedOrdersCount: 320,
+      completedOrdersCount: 318,
+      rating: 4.98,
+    ),
+    TeamMemberModel(
+      id: 'tm-dr-02',
+      fullName: 'Bilal Ahmed',
+      email: 'bilal.driver@uniwash.qa',
+      phone: '+974 6623 4455',
+      category: TeamCategory.driver,
+      driverAffiliation: DriverAffiliation.companyFleet,
+      countryCode: 'QAT',
+      branchId: 'branch-qat-01',
+      branchName: 'Doha Central & Pearl Marina Hub',
+      jobTitle: 'Express Van Courier (Company Fleet)',
+      joinedAt: DateTime(2023, 8, 15),
+      assignedOrdersCount: 265,
+      completedOrdersCount: 262,
+      rating: 4.88,
+    ),
+    TeamMemberModel(
+      id: 'tm-dr-03',
+      fullName: 'Rashid Al-Kuwari',
+      email: 'rashid.driver@uniwash.qa',
+      phone: '+974 3388 9911',
+      category: TeamCategory.driver,
+      driverAffiliation: DriverAffiliation.laundryDedicated,
+      countryCode: 'QAT',
+      branchId: 'branch-qat-02',
+      branchName: 'Al Sadd & Bin Mahmoud Station',
+      jobTitle: 'Dedicated Laundry Facility Driver',
+      joinedAt: DateTime(2024, 1, 10),
+      assignedOrdersCount: 210,
+      completedOrdersCount: 207,
+      rating: 4.79,
+    ),
+    TeamMemberModel(
+      id: 'tm-eng-01',
+      fullName: 'Eng. Zaid Mansoori',
+      email: 'zaid.eng@uniwash.qa',
+      phone: '+974 5544 3322',
+      category: TeamCategory.engineer,
+      countryCode: 'QAT',
+      branchId: 'branch-qat-01',
+      branchName: 'Doha Central & Pearl Marina Hub',
+      jobTitle: 'Lead Mobile & Backend Systems Engineer',
+      joinedAt: DateTime(2023, 5, 20),
+      assignedOrdersCount: 0,
+      completedOrdersCount: 0,
+      rating: 5.0,
+      notes: 'Responsible for app bugs, sync exceptions, scanner issues, and API health',
+    ),
+    TeamMemberModel(
+      id: 'tm-oth-01',
+      fullName: 'Farhan Qasim',
+      email: 'farhan.contractor@uniwash.qa',
+      phone: '+974 7788 1234',
+      category: TeamCategory.other,
+      countryCode: 'QAT',
+      branchId: 'branch-qat-01',
+      branchName: 'Doha Central & Pearl Marina Hub',
+      jobTitle: 'Facility Equipment & Van Fleet Contractor',
+      joinedAt: DateTime(2024, 2, 1),
+      assignedOrdersCount: 0,
+      completedOrdersCount: 0,
+      rating: 4.85,
+    ),
+  ];
+
+  List<TeamMemberModel> get teamMembers => List.unmodifiable(_teamMembers);
+
+  List<TeamMemberModel> getTeamMembersForCountry(String code) {
+    if (code == 'ALL' || code == 'GLOBAL') return _teamMembers;
+    return _teamMembers.where((m) => m.countryCode == code).toList();
+  }
+
+  void addTeamMember(TeamMemberModel member) {
+    _teamMembers.add(member);
+    logAudit(
+      actionType: AuditActionType.teamMemberCreated,
+      entity: 'Team Member',
+      entityId: '${member.id} (${member.fullName})',
+      previousValue: 'None',
+      newValue: '${member.category.title} at ${member.branchName}',
+      reason: 'New team member added to operations roster',
+      countryCode: member.countryCode,
+    );
+    notifyListeners();
+  }
+
+  void updateTeamMember(String id, {required String fullName, required String email, required String phone, required TeamCategory category, required String jobTitle, required String branchId, required String branchName}) {
+    final idx = _teamMembers.indexWhere((m) => m.id == id);
+    if (idx >= 0) {
+      final old = _teamMembers[idx];
+      _teamMembers[idx] = TeamMemberModel(
+        id: old.id,
+        fullName: fullName,
+        email: email,
+        phone: phone,
+        category: category,
+        countryCode: old.countryCode,
+        branchId: branchId,
+        branchName: branchName,
+        jobTitle: jobTitle,
+        isActive: old.isActive,
+        joinedAt: old.joinedAt,
+        assignedOrdersCount: old.assignedOrdersCount,
+        completedOrdersCount: old.completedOrdersCount,
+        rating: old.rating,
+      );
+      logAudit(
+        actionType: AuditActionType.teamMemberEdited,
+        entity: 'Team Member',
+        entityId: id,
+        previousValue: '${old.fullName} | ${old.jobTitle}',
+        newValue: '$fullName | $jobTitle',
+        reason: 'Team member profile and role assignments updated',
+        countryCode: old.countryCode,
+      );
+      notifyListeners();
+    }
+  }
+
+  void toggleTeamMemberStatus(String id) {
+    final idx = _teamMembers.indexWhere((m) => m.id == id);
+    if (idx >= 0) {
+      final old = _teamMembers[idx];
+      _teamMembers[idx].isActive = !old.isActive;
+      logAudit(
+        actionType: AuditActionType.teamMemberEdited,
+        entity: 'Team Member',
+        entityId: id,
+        previousValue: old.isActive ? 'Active' : 'Inactive',
+        newValue: !old.isActive ? 'Active' : 'Inactive',
+        reason: 'Team member active status toggled',
+        countryCode: old.countryCode,
+      );
+      notifyListeners();
+    }
+  }
+
+  // ==========================================
+  // ORDER PROBLEMS & EXCEPTIONS MANAGEMENT
+  // ==========================================
+  final List<OrderProblem> _orderProblems = [
+    OrderProblem(
+      id: 'prb-101',
+      orderId: 'ord-1002',
+      orderNumber: 10843,
+      customerName: 'Sheikha Maryam',
+      countryCode: 'QAT',
+      branchName: 'Doha Central & Pearl Marina Hub',
+      type: ProblemType.qrScanMissed,
+      severity: ProblemSeverity.high,
+      description: 'Order collected but pickup verification QR scan timestamp was missed by courier Tariq.',
+      reportedAt: DateTime.now().subtract(const Duration(minutes: 40)),
+      reportedBy: 'Automated Exception Monitor',
+    ),
+    OrderProblem(
+      id: 'prb-102',
+      orderId: 'ord-1003',
+      orderNumber: 10840,
+      customerName: 'Dr. Khalid Al-Dosari',
+      countryCode: 'QAT',
+      branchName: 'Doha Central & Pearl Marina Hub',
+      type: ProblemType.missingProofPhoto,
+      severity: ProblemSeverity.medium,
+      description: 'Order moved to Ready for Delivery but facility intake batch photo is missing from record.',
+      reportedAt: DateTime.now().subtract(const Duration(hours: 2)),
+      reportedBy: 'Regional QA Inspector',
+    ),
+    OrderProblem(
+      id: 'prb-103',
+      orderId: 'ord-1001',
+      orderNumber: 10842,
+      customerName: 'Jassim Al-Kuwari',
+      countryCode: 'QAT',
+      branchName: 'Doha Central & Pearl Marina Hub',
+      type: ProblemType.orderStuck,
+      severity: ProblemSeverity.low,
+      description: 'Order has been in laundry processing for 4+ hours during standard shift.',
+      reportedAt: DateTime.now().subtract(const Duration(hours: 3)),
+      reportedBy: 'Shift Supervisor',
+      isResolved: true,
+      resolvedAt: DateTime.now().subtract(const Duration(hours: 1)),
+      resolvedBy: 'Super Admin (Sheikh Faisal Al-Thani)',
+      resolutionNotes: 'Verified delicate silk embroidery hand washing protocol in progress.',
+      correctedAction: 'Extended SLA timestamp and notified customer.',
+    ),
+  ];
+
+  List<OrderProblem> get orderProblems => List.unmodifiable(_orderProblems);
+
+  int get unresolvedProblemsCount => _orderProblems.where((p) => !p.isResolved).length;
+
+  void reportOrderProblem(OrderProblem problem) {
+    _orderProblems.insert(0, problem);
+    notifyListeners();
+  }
+
+  void resolveOrderProblem(String problemId, {required String notes, required String action}) {
+    final idx = _orderProblems.indexWhere((p) => p.id == problemId);
+    if (idx >= 0) {
+      final p = _orderProblems[idx];
+      p.markResolved(
+        resolvedBy: '${_currentUser.fullName} (${_currentUser.role.title})',
+        action: action,
+        notes: notes,
+      );
+      logAudit(
+        actionType: AuditActionType.problemResolved,
+        entity: 'Order Exception',
+        entityId: 'Problem #${p.id} for Order #${p.orderNumber}',
+        previousValue: 'Open (${p.severity.label})',
+        newValue: 'Resolved: $action',
+        reason: notes,
+        countryCode: p.countryCode,
+      );
+      notifyListeners();
+    }
+  }
+
+  // Customer Service / Admin: Escalate Unresolved Problem to Admin
+  void escalateProblemToAdmin(String problemId, {required String adminName, required String reason}) {
+    final idx = _orderProblems.indexWhere((p) => p.id == problemId);
+    if (idx >= 0) {
+      final p = _orderProblems[idx];
+      p.escalateToAdmin(
+        adminName: adminName,
+        reason: reason,
+        escalatedBy: '${_currentUser.fullName} (${_currentUser.role.title})',
+      );
+      logAudit(
+        actionType: AuditActionType.problemResolved,
+        entity: 'Escalated Order Exception',
+        entityId: 'Problem #${p.id} for Order #${p.orderNumber}',
+        previousValue: 'Customer Support Queue',
+        newValue: 'Escalated to $adminName',
+        reason: reason,
+        countryCode: p.countryCode,
+      );
+      _messages.add(ChatMessage(
+        id: 'msg-${DateTime.now().millisecondsSinceEpoch}',
+        sender: 'Executive Operations Alert',
+        text: '🚨 EXCEPTION ESCALATED TO ADMIN ($adminName): Order #${p.orderNumber} - $reason',
+        timestamp: DateTime.now(),
+        isMe: false,
+      ));
+      notifyListeners();
+    }
+  }
+
+  // ==========================================
+  // AUDIT LOGGING SYSTEM
+  // ==========================================
+  final List<AuditLogEntry> _auditLogs = [
+    AuditLogEntry(
+      id: 'aud-001',
+      performedBy: 'Sheikh Faisal Al-Thani',
+      performedByRole: 'Super Admin',
+      performedById: 'adm-01',
+      actionType: AuditActionType.adminCreated,
+      entity: 'Admin Account',
+      entityId: 'adm-02 (Rashid Al-Sulaiti)',
+      previousValue: 'Unregistered',
+      newValue: 'Assigned Qatar Operations Admin',
+      reason: 'Regional Operations mandate for Qatar World Class Laundry Standards',
+      timestamp: DateTime.now().subtract(const Duration(days: 4)),
+      countryCode: 'QAT',
+    ),
+    AuditLogEntry(
+      id: 'aud-002',
+      performedBy: 'Rashid Al-Sulaiti',
+      performedByRole: 'Regional Admin',
+      performedById: 'adm-02',
+      actionType: AuditActionType.orderDriverReassigned,
+      entity: 'Order',
+      entityId: 'ord-1002 (#10843)',
+      previousValue: 'Unassigned',
+      newValue: 'Assigned Tariq Al-Mansoor (DRV-QA-8821)',
+      reason: 'Fast express dispatch scheduled for Pearl VIP pickup',
+      timestamp: DateTime.now().subtract(const Duration(hours: 4)),
+      countryCode: 'QAT',
+    ),
+  ];
+
+  List<AuditLogEntry> get auditLogs => List.unmodifiable(_auditLogs);
+
+  void logAudit({
+    required AuditActionType actionType,
+    required String entity,
+    required String entityId,
+    required String previousValue,
+    required String newValue,
+    required String reason,
+    String? countryCode,
+  }) {
+    final entry = AuditLogEntry(
+      id: 'aud-${DateTime.now().millisecondsSinceEpoch}',
+      performedBy: _currentUser.fullName,
+      performedByRole: _currentUser.role.title,
+      performedById: _currentUser.id,
+      actionType: actionType,
+      entity: entity,
+      entityId: entityId,
+      previousValue: previousValue,
+      newValue: newValue,
+      reason: reason,
+      timestamp: DateTime.now(),
+      countryCode: countryCode ?? _currentUser.countryCode,
+    );
+    _auditLogs.insert(0, entry);
+    notifyListeners();
+  }
+
+  // ==========================================
+  // OPERATIONAL CORRECTION TOOLS (CONTROLLED WITH AUDIT)
+  // ==========================================
+  bool correctOrderStatus(String orderId, OrderStatus newStatus, {required String reason}) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      final old = _orders[idx];
+      final prevName = old.status.name;
+      old.status = newStatus;
+
+      // Sync workflow step if applicable
+      if (newStatus == OrderStatus.inLaundry) {
+        old.workflowStep = DriverWorkflowStep.dispatchedToLaundry;
+      } else if (newStatus == OrderStatus.delivered) {
+        old.workflowStep = DriverWorkflowStep.delivered;
+      } else if (newStatus == OrderStatus.pickedUp) {
+        old.workflowStep = DriverWorkflowStep.collectionCompleted;
+      }
+
+      logAudit(
+        actionType: AuditActionType.orderStatusCorrected,
+        entity: 'Order',
+        entityId: 'Order #${old.orderNumber} ($orderId)',
+        previousValue: prevName,
+        newValue: newStatus.name,
+        reason: reason,
+        countryCode: 'QAT',
+      );
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  bool reassignOrderDriver(String orderId, String newDriverId, {required String reason}) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      final old = _orders[idx];
+      final driver = _drivers.firstWhere((d) => d.id == newDriverId, orElse: () => _drivers.first);
+      final prevDriver = old.assignedDriverName;
+
+      old.assignedDriverId = driver.id;
+      old.assignedDriverName = driver.fullName;
+      old.assignedDriverPhone = driver.phone;
+      if (old.status == OrderStatus.placed) {
+        old.status = OrderStatus.driverAssigned;
+        old.workflowStep = DriverWorkflowStep.assigned;
+      }
+
+      logAudit(
+        actionType: AuditActionType.orderDriverReassigned,
+        entity: 'Order',
+        entityId: 'Order #${old.orderNumber} ($orderId)',
+        previousValue: prevDriver,
+        newValue: '${driver.fullName} (${driver.userId})',
+        reason: reason,
+        countryCode: 'QAT',
+      );
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  bool reassignOrderBranch(String orderId, String newLaundryId, {required String reason}) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      final old = _orders[idx];
+      final laundry = _laundries.firstWhere((l) => l.id == newLaundryId, orElse: () => _laundries.first);
+      final prevLaundry = old.laundryName;
+
+      old.laundryId = laundry.id;
+      old.laundryName = laundry.name;
+
+      logAudit(
+        actionType: AuditActionType.orderBranchReassigned,
+        entity: 'Order',
+        entityId: 'Order #${old.orderNumber} ($orderId)',
+        previousValue: prevLaundry,
+        newValue: '${laundry.name} (${laundry.userId})',
+        reason: reason,
+        countryCode: 'QAT',
+      );
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  bool overrideOrderQrState(String orderId, {required bool isScanned, required String reason}) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      final old = _orders[idx];
+      final prev = 'Pickup QR: ${old.collectionQrScanned}, Laundry QR: ${old.laundryQrScanned}, Delivery QR: ${old.deliveryQrScanned}';
+      
+      old.collectionQrScanned = isScanned;
+      if (isScanned && old.collectionQrScannedAt == null) {
+        old.collectionQrScannedAt = DateTime.now();
+      }
+
+      logAudit(
+        actionType: AuditActionType.qrStateCorrected,
+        entity: 'Order QR State',
+        entityId: 'Order #${old.orderNumber} ($orderId)',
+        previousValue: prev,
+        newValue: 'Overridden to scanned=$isScanned with supervisor override clearance',
+        reason: reason,
+        countryCode: 'QAT',
+      );
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  bool reopenOrder(String orderId, {required String reason}) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      final old = _orders[idx];
+      final prev = old.status.name;
+      old.status = OrderStatus.inLaundry;
+      old.workflowStep = DriverWorkflowStep.dispatchedToLaundry;
+
+      logAudit(
+        actionType: AuditActionType.orderReopened,
+        entity: 'Order',
+        entityId: 'Order #${old.orderNumber} ($orderId)',
+        previousValue: prev,
+        newValue: 'Reopened to ${OrderStatus.inLaundry.name}',
+        reason: reason,
+        countryCode: 'QAT',
+      );
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  void addOrderInternalNote(String orderId, String noteText) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      _orders[idx].attachments.add(OrderAttachment(
+        id: 'note-${DateTime.now().millisecondsSinceEpoch}',
+        fileName: 'Supervisor_Internal_Note.txt',
+        fileType: 'text',
+        uploadedBy: 'admin',
+        description: '[$nowFormatted - ${_currentUser.fullName}]: $noteText',
+        uploadedAt: DateTime.now(),
+      ));
+      notifyListeners();
+    }
+  }
+
+  String get nowFormatted {
+    final now = DateTime.now();
+    return '${now.hour.toString().padLeft(2, '0')}:${now.minute.toString().padLeft(2, '0')}';
+  }
+
+  // ==========================================
+  // SYSTEM BUGS & BACKEND DIAGNOSTICS (ENGINEER WORKSPACE)
+  // ==========================================
+  final List<SystemBug> _systemBugs = [
+    SystemBug(
+      id: 'BUG-1092',
+      title: 'Camera autofocus delay during QR barcode capture on low-light Samsung devices',
+      description: 'Drivers with Galaxy A54 report 3-4 second shutter delay when scanning bag QR in indoor parking garages.',
+      module: 'Driver App QR Scanner',
+      stackTrace: 'Camera2Device.java:142\nCameraCaptureSession.setRepeatingRequest() [Timeout 4000ms]\nQRScannerOverlay.dart:184',
+      deviceInfo: 'Samsung SM-A546B / Android 14 / Driver Build v2.4.1',
+      severity: BugSeverity.medium,
+      status: BugStatus.inProgress,
+      reportedAt: DateTime.now().subtract(const Duration(hours: 4)),
+      reportedBy: 'Driver Telemetry (Tariq Al-Mansoor)',
+    ),
+    SystemBug(
+      id: 'BUG-1093',
+      title: 'WebSocket live courier GPS ping disconnect after device screen sleeps > 10m',
+      description: 'Background geolocation service enters deep doze state on aggressive OEM battery savers, delaying live ETA on Customer Screen.',
+      module: 'Live GPS Tracking & Sync',
+      stackTrace: 'BackgroundGeolocationService.kt:88\nWSSocketManager.onDisconnect(1006 - Abnormal Closure)\nStateService.updateDriverLocation:310',
+      deviceInfo: 'Xiaomi Redmi Note 12 / MIUI 14 / Driver Build v2.4.1',
+      severity: BugSeverity.high,
+      status: BugStatus.open,
+      reportedAt: DateTime.now().subtract(const Duration(hours: 6)),
+      reportedBy: 'QA Automated Heartbeat Monitor',
+    ),
+    SystemBug(
+      id: 'BUG-1094',
+      title: 'Bluetooth thermal invoice printer ESC/POS line feed offset by 10mm on 58mm rolls',
+      description: 'Thermal receipt footer prints slightly off-center on 58mm compact portable mobile printers.',
+      module: 'Thermal Invoice Printing',
+      stackTrace: 'EscPosPrinter.dart:94\nThermalReceiptDialog.dart:312',
+      deviceInfo: 'Sunmi V2 Pro / Android 11 / Laundry Portal v2.4.0',
+      severity: BugSeverity.low,
+      status: BugStatus.resolved,
+      reportedAt: DateTime.now().subtract(const Duration(days: 1)),
+      reportedBy: 'Pearl Branch Laundry Supervisor',
+      resolvedAt: DateTime.now().subtract(const Duration(hours: 2)),
+      resolvedBy: 'Eng. Zaid Mansoori',
+      resolutionNotes: 'Calibrated ESC/POS 58mm canvas margin to 384 dots width. Patch tested on Sunmi V2.',
+      fixCommitRef: 'commit-escpos-margin-fix-v242',
+    ),
+  ];
+
+  List<SystemBug> get systemBugs => List.unmodifiable(_systemBugs);
+  int get openBugsCount => _systemBugs.where((b) => !b.isResolved).length;
+
+  void reportBug(SystemBug bug) {
+    _systemBugs.insert(0, bug);
+    notifyListeners();
+  }
+
+  void updateBugStatus(String bugId, BugStatus status) {
+    final idx = _systemBugs.indexWhere((b) => b.id == bugId);
+    if (idx >= 0) {
+      _systemBugs[idx].status = status;
+      notifyListeners();
+    }
+  }
+
+  void resolveBug(String bugId, {required String notes, String? commitRef}) {
+    final idx = _systemBugs.indexWhere((b) => b.id == bugId);
+    if (idx >= 0) {
+      _systemBugs[idx].markResolved(
+        engineerName: _currentUser.fullName,
+        notes: notes,
+        commitRef: commitRef,
+      );
+      logAudit(
+        actionType: AuditActionType.adminEdited,
+        entity: 'System Bug Patch',
+        entityId: 'Bug #$bugId (${_systemBugs[idx].title})',
+        previousValue: 'Open',
+        newValue: 'Resolved & Patched by ${_currentUser.fullName}',
+        reason: notes,
+        countryCode: 'GLOBAL',
+      );
+      notifyListeners();
+    }
+  }
+
+  // ==========================================
+  // CUSTOMER SERVICE & ADMIN ORDER ACTIONS
+  // ==========================================
+
+  // Reschedule Order (Pickup / Delivery)
+  bool rescheduleOrder(
+    String orderId, {
+    DateTime? pickupDate,
+    String? pickupSlot,
+    DateTime? deliveryDate,
+    String? deliverySlot,
+    required String reason,
+  }) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      final order = _orders[idx];
+      final prev = 'Pickup: ${order.scheduledPickupDate != null ? "${order.scheduledPickupDate!.day}/${order.scheduledPickupDate!.month}" : "Standard"} (${order.scheduledPickupSlot ?? "ASAP"}), Delivery: ${order.scheduledDeliveryDate != null ? "${order.scheduledDeliveryDate!.day}/${order.scheduledDeliveryDate!.month}" : "Standard"} (${order.scheduledDeliverySlot ?? "Standard"})';
+      
+      if (pickupDate != null) order.scheduledPickupDate = pickupDate;
+      if (pickupSlot != null) order.scheduledPickupSlot = pickupSlot;
+      if (deliveryDate != null) order.scheduledDeliveryDate = deliveryDate;
+      if (deliverySlot != null) order.scheduledDeliverySlot = deliverySlot;
+
+      final updated = 'Pickup: ${order.scheduledPickupDate != null ? "${order.scheduledPickupDate!.day}/${order.scheduledPickupDate!.month}" : "Standard"} (${order.scheduledPickupSlot ?? "ASAP"}), Delivery: ${order.scheduledDeliveryDate != null ? "${order.scheduledDeliveryDate!.day}/${order.scheduledDeliveryDate!.month}" : "Standard"} (${order.scheduledDeliverySlot ?? "Standard"})';
+
+      addOrderInternalNote(orderId, 'Rescheduled by ${_currentUser.fullName}: $reason ($updated)');
+
+      logAudit(
+        actionType: AuditActionType.orderStatusCorrected,
+        entity: 'Order Reschedule',
+        entityId: 'Order #${order.orderNumber} ($orderId)',
+        previousValue: prev,
+        newValue: updated,
+        reason: reason,
+        countryCode: 'QAT',
+      );
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  // Create Manual Order (via Call/WhatsApp Customer Service Intake)
+  LaundryOrder createManualOrder({
+    required String customerName,
+    required String customerPhone,
+    required CustomerAddress address,
+    required List<OrderItem> items,
+    required String laundryId,
+    required String laundryName,
+    DateTime? pickupDate,
+    String? pickupSlot,
+    DateTime? deliveryDate,
+    String? deliverySlot,
+    String specialInstructions = '',
+    String paymentMethod = 'cash',
+    double deliveryFee = 15.0,
+    List<String>? tags,
+    String? customQrTag,
+  }) {
+    final nextNumber = (_orders.map((o) => o.orderNumber).fold(10845, (max, n) => n > max ? n : max)) + 1;
+    final newOrder = LaundryOrder(
+      id: 'ord-${DateTime.now().millisecondsSinceEpoch}',
+      orderNumber: nextNumber,
+      customerName: customerName,
+      customerPhone: customerPhone,
+      address: address,
+      items: items,
+      laundryId: laundryId,
+      laundryName: laundryName,
+      createdAt: DateTime.now(),
+      status: OrderStatus.placed,
+      deliveryFee: deliveryFee,
+      paymentMethod: paymentMethod,
+      specialInstructions: specialInstructions,
+      scheduledPickupDate: pickupDate,
+      scheduledPickupSlot: pickupSlot,
+      scheduledDeliveryDate: deliveryDate,
+      scheduledDeliverySlot: deliverySlot,
+      tags: tags ?? ['TAG-$nextNumber-NEW'],
+      customQrTag: customQrTag,
+      customerContactNotes: ['Order manually booked via Customer Service by ${_currentUser.fullName} at $nowFormatted.'],
+      isCustomerVerified: true,
+    );
+
+    _orders.insert(0, newOrder);
+
+    logAudit(
+      actionType: AuditActionType.orderStatusCorrected,
+      entity: 'Manual Order Created',
+      entityId: 'Order #${newOrder.orderNumber} ($customerName)',
+      previousValue: 'None',
+      newValue: 'Manual order created by CS/Admin with ${items.length} items',
+      reason: 'Customer requested order intake via direct phone/WhatsApp channel',
+      countryCode: 'QAT',
+    );
+    notifyListeners();
+    return newOrder;
+  }
+
+  // Delete / Cancel Order
+  bool deleteOrder(String orderId, {required String reason}) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      final order = _orders[idx];
+      order.status = OrderStatus.cancelled;
+      order.cancellationRecord = OrderCancellationRecord(
+        orderId: order.id,
+        cancelledAt: DateTime.now(),
+        reason: reason,
+        customDescription: 'Cancelled at stage: ${order.workflowStep.displayName}',
+        cancelledBy: '${_currentUser.fullName} (${_currentUser.role.title})',
+      );
+
+      logAudit(
+        actionType: AuditActionType.orderStatusCorrected,
+        entity: 'Order Cancelled/Deleted',
+        entityId: 'Order #${order.orderNumber} ($orderId)',
+        previousValue: 'Active (${order.workflowStep.displayName})',
+        newValue: 'Cancelled / Archived by ${_currentUser.fullName}',
+        reason: reason,
+        countryCode: 'QAT',
+      );
+      notifyListeners();
+      return true;
+    }
+    return false;
+  }
+
+  // Add / Edit / Remove Order Garment Tags
+  void updateOrderTags(String orderId, List<String> newTags) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      final order = _orders[idx];
+      final prev = order.tags.join(', ');
+      order.tags = List.from(newTags);
+      logAudit(
+        actionType: AuditActionType.orderStatusCorrected,
+        entity: 'Order Tags',
+        entityId: 'Order #${order.orderNumber} ($orderId)',
+        previousValue: prev.isEmpty ? 'No Tags' : prev,
+        newValue: order.tags.join(', '),
+        reason: 'Garment and bag tags updated by ${_currentUser.fullName}',
+        countryCode: 'QAT',
+      );
+      notifyListeners();
+    }
+  }
+
+  // Custom QR Code Tag Override / Regeneration
+  void overrideCustomQrTag(String orderId, String? customQr) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      final order = _orders[idx];
+      final prev = order.qrCodePayload;
+      order.customQrTag = customQr;
+      logAudit(
+        actionType: AuditActionType.qrStateCorrected,
+        entity: 'Order QR Tag Code',
+        entityId: 'Order #${order.orderNumber} ($orderId)',
+        previousValue: prev,
+        newValue: order.qrCodePayload,
+        reason: 'QR Tag override/regeneration performed by ${_currentUser.fullName}',
+        countryCode: 'QAT',
+      );
+      notifyListeners();
+    }
+  }
+
+  // Contact Customer & Log Call/WhatsApp Check
+  void logCustomerContact(
+    String orderId, {
+    required String channel,
+    required String outcome,
+    required String notes,
+  }) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      final order = _orders[idx];
+      final log = '[$nowFormatted via $channel]: $outcome — $notes (Agent: ${_currentUser.fullName})';
+      order.customerContactNotes.insert(0, log);
+      order.isCustomerVerified = true;
+      addOrderInternalNote(orderId, 'Customer verification logged: $log');
+      notifyListeners();
+    }
+  }
+
+  // Order Check & Item Count Verification
+  void verifyOrderCheck(String orderId, {required String checkNotes}) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      final order = _orders[idx];
+      order.isCountVerifiedByLaundry = true;
+      for (final item in order.items) {
+        item.verifiedQuantity = item.quantity;
+      }
+      addOrderInternalNote(orderId, 'Order verified by ${_currentUser.fullName}: $checkNotes');
+      notifyListeners();
+    }
+  }
+
+  // Customer Service: Send direct message to customer (Live Chat, WhatsApp, Email)
+  void sendCustomerDirectMessage(String orderId, {required String channel, required String text, String? recipientEmail}) {
+    final idx = _orders.indexWhere((o) => o.id == orderId);
+    if (idx >= 0) {
+      final ord = _orders[idx];
+      final timestampStr = DateFormat('HH:mm').format(DateTime.now());
+      ord.customerContactNotes.insert(0, '[$timestampStr via $channel]: $text (Agent: ${_currentUser.fullName})');
+      _messages.add(ChatMessage(
+        id: 'msg-${DateTime.now().millisecondsSinceEpoch}',
+        sender: 'Support Agent (${_currentUser.fullName}) to ${ord.customerName}',
+        text: '[$channel • Order #${ord.orderNumber}]: $text',
+        timestamp: DateTime.now(),
+        isMe: true,
+      ));
+      logAudit(
+        actionType: AuditActionType.orderStatusCorrected,
+        entity: 'Customer Communication',
+        entityId: 'Order #${ord.orderNumber} (${ord.customerName})',
+        previousValue: 'Standby',
+        newValue: 'Dispatched via $channel',
+        reason: text,
+        countryCode: 'QAT',
+      );
+      notifyListeners();
+    }
+  }
 }
+
 

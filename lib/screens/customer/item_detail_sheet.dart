@@ -225,23 +225,32 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                Text(
-                  _isKg ? 'Weight (Kilograms - KG)' : 'Garment Quantity (Pieces)',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.textDark,
+                Expanded(
+                  child: Text(
+                    _isKg ? 'Weight (Kilograms - KG)' : 'Garment Quantity (Pieces)',
+                    style: const TextStyle(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.textDark,
+                    ),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
                   ),
                 ),
+                const SizedBox(width: 8),
                 Container(
                   decoration: BoxDecoration(
                     color: AppColors.surfaceMuted,
                     borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: AppColors.border.withValues(alpha: 0.6)),
                   ),
                   child: Row(
+                    mainAxisSize: MainAxisSize.min,
                     children: [
                       IconButton(
-                        icon: const Icon(Icons.remove, size: 18),
+                        constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                        padding: EdgeInsets.zero,
+                        icon: const Icon(Icons.remove, size: 16),
                         onPressed: _qtyOrWeight > (_isKg ? 0.5 : 1.0)
                             ? () {
                                 setState(() {
@@ -252,17 +261,19 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
                             : null,
                       ),
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        padding: const EdgeInsets.symmetric(horizontal: 8),
                         child: Text(
                           _isKg ? '${_qtyOrWeight.toStringAsFixed(1)} KG' : '${_qtyOrWeight.round()} Pcs',
                           style: const TextStyle(
-                            fontSize: 16,
+                            fontSize: 15,
                             fontWeight: FontWeight.w700,
                           ),
                         ),
                       ),
                       IconButton(
-                        icon: const Icon(Icons.add, size: 18),
+                        constraints: const BoxConstraints(minWidth: 34, minHeight: 34),
+                        padding: EdgeInsets.zero,
+                        icon: const Icon(Icons.add, size: 16),
                         onPressed: () {
                           setState(() {
                             _qtyOrWeight = (_qtyOrWeight + (_isKg ? 0.5 : 1.0));
@@ -277,20 +288,24 @@ class _ItemDetailSheetState extends State<ItemDetailSheet> {
             ),
             if (_isKg) ...[
               const SizedBox(height: 10),
-              Row(
-                children: [0.5, 1.0, 2.0, 3.0, 5.0, 10.0].map((kg) {
-                  final isSel = (_qtyOrWeight - kg).abs() < 0.05;
-                  return Padding(
-                    padding: const EdgeInsets.only(right: 6),
-                    child: ChoiceChip(
-                      label: Text('${kg.toStringAsFixed(kg % 1 == 0 ? 0 : 1)} KG', style: const TextStyle(fontSize: 11)),
-                      selected: isSel,
-                      onSelected: (val) {
-                        if (val) setState(() => _qtyOrWeight = kg);
-                      },
-                    ),
-                  );
-                }).toList(),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                physics: const BouncingScrollPhysics(),
+                child: Row(
+                  children: [0.5, 1.0, 2.0, 3.0, 5.0, 10.0].map((kg) {
+                    final isSel = (_qtyOrWeight - kg).abs() < 0.05;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 6),
+                      child: ChoiceChip(
+                        label: Text('${kg.toStringAsFixed(kg % 1 == 0 ? 0 : 1)} KG', style: const TextStyle(fontSize: 11)),
+                        selected: isSel,
+                        onSelected: (val) {
+                          if (val) setState(() => _qtyOrWeight = kg);
+                        },
+                      ),
+                    );
+                  }).toList(),
+                ),
               ),
             ],
             const SizedBox(height: 16),

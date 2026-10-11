@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:provider/provider.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../models/order.dart';
 import '../../models/order_item.dart';
 import '../../services/esc_pos_formatter.dart';
+import '../../services/state_service.dart';
 import '../../theme/app_colors.dart';
 import '../../widgets/uniwash_logo.dart';
 
@@ -16,6 +18,8 @@ class LaundryThermalInvoiceDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final dateFormat = DateFormat('yyyy-MM-dd HH:mm');
+    final state = context.watch<StateService>();
+    final canViewPrice = state.canViewPrice();
 
     return Dialog(
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -167,13 +171,23 @@ class LaundryThermalInvoiceDialog extends StatelessWidget {
                               ),
                             ),
                             const SizedBox(width: 12),
-                            Text(
-                              '${item.effectiveTotal.toStringAsFixed(0)} QAR',
-                              style: const TextStyle(
-                                fontSize: 11,
-                                fontWeight: FontWeight.w700,
+                            if (canViewPrice)
+                              Text(
+                                '${item.effectiveTotal.toStringAsFixed(0)} QAR',
+                                style: const TextStyle(
+                                  fontSize: 11,
+                                  fontWeight: FontWeight.w700,
+                                ),
+                              )
+                            else
+                              const Text(
+                                '[TAGGED]',
+                                style: TextStyle(
+                                  fontSize: 10,
+                                  fontWeight: FontWeight.w700,
+                                  color: Colors.black54,
+                                ),
                               ),
-                            ),
                           ],
                         ),
                       );
@@ -183,59 +197,99 @@ class LaundryThermalInvoiceDialog extends StatelessWidget {
                       '----------------------------------------------------',
                       maxLines: 1,
                     ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text('Subtotal:', style: TextStyle(fontSize: 11)),
-                        Text(
-                          '${order.subtotal.toStringAsFixed(2)} QAR',
-                          style: const TextStyle(fontSize: 11),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'Delivery Fee:',
-                          style: TextStyle(fontSize: 11),
-                        ),
-                        Text(
-                          '${order.deliveryFee.toStringAsFixed(2)} QAR',
-                          style: const TextStyle(fontSize: 11),
-                        ),
-                      ],
-                    ),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: const [
-                        Text(
-                          'Govt Tax (0% VAT):',
-                          style: TextStyle(fontSize: 11),
-                        ),
-                        Text('0.00 QAR', style: TextStyle(fontSize: 11)),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        const Text(
-                          'TOTAL AMOUNT:',
-                          style: TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 13,
+                    if (canViewPrice) ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text('Subtotal:', style: TextStyle(fontSize: 11)),
+                          Text(
+                            '${order.subtotal.toStringAsFixed(2)} QAR',
+                            style: const TextStyle(fontSize: 11),
                           ),
-                        ),
-                        Text(
-                          '${order.totalAmount.toStringAsFixed(2)} QAR',
-                          style: const TextStyle(
-                            fontWeight: FontWeight.w900,
-                            fontSize: 14,
+                        ],
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Delivery Fee:',
+                            style: TextStyle(fontSize: 11),
                           ),
-                        ),
-                      ],
-                    ),
+                          Text(
+                            '${order.deliveryFee.toStringAsFixed(2)} QAR',
+                            style: const TextStyle(fontSize: 11),
+                          ),
+                        ],
+                      ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: const [
+                          Text(
+                            'Govt Tax (0% VAT):',
+                            style: TextStyle(fontSize: 11),
+                          ),
+                          Text('0.00 QAR', style: TextStyle(fontSize: 11)),
+                        ],
+                      ),
+                      const SizedBox(height: 4),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'TOTAL AMOUNT:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 13,
+                            ),
+                          ),
+                          Text(
+                            '${order.totalAmount.toStringAsFixed(2)} QAR',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 14,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ] else ...[
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'TOTAL GARMENTS COUNT:',
+                            style: TextStyle(
+                              fontWeight: FontWeight.w800,
+                              fontSize: 11,
+                            ),
+                          ),
+                          Text(
+                            '${order.totalItemCount} PCS',
+                            style: const TextStyle(
+                              fontWeight: FontWeight.w900,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 3),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: const [
+                          Text(
+                            'PRICE VISIBILITY:',
+                            style: TextStyle(fontSize: 10, color: Colors.grey),
+                          ),
+                          Text(
+                            'PROTECTED (ADMIN ONLY)',
+                            style: TextStyle(
+                              fontSize: 10,
+                              fontWeight: FontWeight.w700,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                     const Text(
                       '====================================================',
                       maxLines: 1,

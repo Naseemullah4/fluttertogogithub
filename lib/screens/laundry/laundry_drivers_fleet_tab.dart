@@ -200,7 +200,10 @@ class LaundryDriversFleetTab extends StatelessWidget {
                                 const SizedBox(width: 8),
                                 _statPill('Completed Delivered', '$completedCount orders', AppColors.success),
                                 const SizedBox(width: 8),
-                                _statPill('Delivered Value', state.formatCurrency(totalEarned), AppColors.primary),
+                                if (state.canViewPrice())
+                                  _statPill('Delivered Value', state.formatCurrency(totalEarned), AppColors.primary)
+                                else
+                                  _statPill('Delivered Rate', '${driverOrders.isEmpty ? 100 : ((completedCount / driverOrders.length) * 100).toInt()}% Success', AppColors.primary),
                               ],
                             ),
                           ],
@@ -351,7 +354,10 @@ class LaundryDriversFleetTab extends StatelessWidget {
                                     ],
                                   ),
                                 ),
-                                Text(state.formatCurrency(o.totalAmount), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13)),
+                                if (state.canViewPrice())
+                                  Text(state.formatCurrency(o.totalAmount), style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 13))
+                                else
+                                  Text('${o.totalItemCount} Items', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 12, color: AppColors.textMuted)),
                                 const SizedBox(width: 10),
                                 IconButton(
                                   icon: const Icon(Icons.visibility_outlined, size: 18),

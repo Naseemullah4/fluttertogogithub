@@ -5,24 +5,35 @@ import '../../theme/app_colors.dart';
 class DriverQrScannerDialog extends StatefulWidget {
   final LaundryOrder order;
   final VoidCallback onVerified;
+  final String title;
+  final String buttonLabel;
 
   const DriverQrScannerDialog({
     super.key,
     required this.order,
     required this.onVerified,
+    this.title = 'Scan Customer QR Code',
+    this.buttonLabel = 'Confirm Item Collection',
   });
 
   @override
   State<DriverQrScannerDialog> createState() => _DriverQrScannerDialogState();
 }
 
-class _DriverQrScannerDialogState extends State<DriverQrScannerDialog> {
+class _DriverQrScannerDialogState extends State<DriverQrScannerDialog>
+    with SingleTickerProviderStateMixin {
   bool _isScanning = true;
   bool _isSuccess = false;
+  late AnimationController _laserController;
 
   @override
   void initState() {
     super.initState();
+    _laserController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1400),
+    )..repeat(reverse: true);
+
     // Simulate camera scanning delay and recognition
     Future.delayed(const Duration(milliseconds: 1600), () {
       if (mounted) {
@@ -32,6 +43,12 @@ class _DriverQrScannerDialogState extends State<DriverQrScannerDialog> {
         });
       }
     });
+  }
+
+  @override
+  void dispose() {
+    _laserController.dispose();
+    super.dispose();
   }
 
   @override
@@ -46,9 +63,11 @@ class _DriverQrScannerDialogState extends State<DriverQrScannerDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Scan Customer QR Code',
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                Expanded(
+                  child: Text(
+                    widget.title,
+                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                  ),
                 ),
                 IconButton(
                   icon: const Icon(Icons.close),
@@ -138,7 +157,7 @@ class _DriverQrScannerDialogState extends State<DriverQrScannerDialog> {
                         Navigator.pop(context);
                       }
                     : null,
-                child: const Text('Confirm Item Collection'),
+                child: Text(widget.buttonLabel),
               ),
             ),
           ],

@@ -4,6 +4,8 @@ enum UserRole {
   laundryWorker,
   regionalAdmin,
   superAdmin,
+  customerService,
+  engineer,
 }
 
 extension UserRoleExtension on UserRole {
@@ -19,6 +21,10 @@ extension UserRoleExtension on UserRole {
         return 'Regional Admin (Qatar)';
       case UserRole.superAdmin:
         return 'Super Admin (Global)';
+      case UserRole.customerService:
+        return 'Customer Support & Service Specialist';
+      case UserRole.engineer:
+        return 'Software & System QA Engineer';
     }
   }
 
@@ -34,6 +40,10 @@ extension UserRoleExtension on UserRole {
         return 'Admin';
       case UserRole.superAdmin:
         return 'Super Admin';
+      case UserRole.customerService:
+        return 'Support / CS';
+      case UserRole.engineer:
+        return 'Engineer';
     }
   }
 }

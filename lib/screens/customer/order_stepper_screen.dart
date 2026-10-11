@@ -18,13 +18,13 @@ class OrderStepperScreen extends StatelessWidget {
   static const List<Map<String, dynamic>> _stepperSteps = [
     {
       'status': OrderStatus.placed,
-      'title': 'Order Placed',
-      'desc': 'Order received and scheduled for driver pickup.',
+      'title': 'Order Placed (Sent to Admin)',
+      'desc': 'Order received by Admin Operations and awaiting driver dispatch.',
     },
     {
       'status': OrderStatus.driverAssigned,
-      'title': 'Driver Assigned & En-Route',
-      'desc': 'Driver is heading to your location for collection.',
+      'title': 'Driver Assigned by Admin',
+      'desc': 'Admin dispatched a driver to your location for collection.',
     },
     {
       'status': OrderStatus.pickedUp,
@@ -197,11 +197,37 @@ class OrderStepperScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      BadgePill(
-                        label: 'LIVE TRACKER',
-                        backgroundColor: Colors.white.withValues(alpha: 0.2),
-                        textColor: Colors.white,
-                        icon: Icons.sensors,
+                      Row(
+                        children: [
+                          BadgePill(
+                            label: 'LIVE TRACKER',
+                            backgroundColor: Colors.white.withValues(alpha: 0.2),
+                            textColor: Colors.white,
+                            icon: Icons.sensors,
+                          ),
+                          if (currentOrder.isUrgent) ...[
+                            const SizedBox(width: 8),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFDC2626),
+                                borderRadius: BorderRadius.circular(6),
+                                border: Border.all(color: Colors.white, width: 1),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: const [
+                                  Icon(Icons.bolt, color: Colors.white, size: 12),
+                                  SizedBox(width: 2),
+                                  Text(
+                                    'URGENT 4-HR RUSH',
+                                    style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.5),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ],
                       ),
                       Text(
                         DateFormat('hh:mm a, dd MMM').format(currentOrder.createdAt),
@@ -234,6 +260,29 @@ class OrderStepperScreen extends StatelessWidget {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 10),
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: Row(
+                      children: [
+                        const Icon(Icons.schedule, color: Colors.white70, size: 14),
+                        const SizedBox(width: 6),
+                        Expanded(
+                          child: Text(
+                            currentOrder.scheduleSummary,
+                            style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.w600),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
@@ -423,14 +472,19 @@ class OrderStepperScreen extends StatelessWidget {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
-                        'Itemized Garments & Services',
-                        style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                      const Expanded(
+                        child: Text(
+                          'Itemized Garments & Services',
+                          style: TextStyle(fontSize: 15, fontWeight: FontWeight.w700),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                       ),
+                      const SizedBox(width: 8),
                       if (currentOrder.isCountVerifiedByLaundry)
-                        const BadgePill(
+                        BadgePill(
                           label: 'COUNT VERIFIED',
-                          backgroundColor: Color(0xFFD1FAE5),
+                          backgroundColor: const Color(0xFFD1FAE5),
                           textColor: AppColors.success,
                           icon: Icons.verified,
                         ),
